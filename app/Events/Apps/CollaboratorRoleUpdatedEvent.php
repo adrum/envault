@@ -35,8 +35,6 @@ class CollaboratorRoleUpdatedEvent
     /**
      * Create a new event instance.
      *
-     * @param  App  $app
-     * @param  User  $collaborator
      * @param  string  $oldRole
      * @param  string  $newRole
      * @return void

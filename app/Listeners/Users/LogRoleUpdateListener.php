@@ -9,7 +9,6 @@ class LogRoleUpdateListener
     /**
      * Handle the event.
      *
-     * @param  RoleUpdatedEvent  $event
      * @return void
      */
     public function handle(RoleUpdatedEvent $event)

@@ -25,8 +25,6 @@ class CollaboratorAddedEvent
     /**
      * Create a new event instance.
      *
-     * @param  App  $app
-     * @param  User  $collaborator
      * @return void
      */
     public function __construct(App $app, User $collaborator)

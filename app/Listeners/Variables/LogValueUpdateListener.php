@@ -9,7 +9,6 @@ class LogValueUpdateListener
     /**
      * Handle the event.
      *
-     * @param  ValueUpdatedEvent  $event
      * @return void
      */
     public function handle(ValueUpdatedEvent $event)

@@ -19,7 +19,6 @@ class NotificationsSetUpEvent
     /**
      * Create a new event instance.
      *
-     * @param  App  $app
      * @return void
      */
     public function __construct(App $app)

@@ -29,7 +29,6 @@ class NameUpdatedEvent
     /**
      * Create a new event instance.
      *
-     * @param  App  $app
      * @param  string  $oldName
      * @param  string  $newName
      * @return void

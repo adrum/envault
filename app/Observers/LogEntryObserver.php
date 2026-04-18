@@ -9,7 +9,6 @@ class LogEntryObserver
     /**
      * Handle the log entry "created" event.
      *
-     * @param  LogEntry  $logEntry
      * @return void
      */
     public function created(LogEntry $logEntry)

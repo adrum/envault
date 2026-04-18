@@ -9,7 +9,6 @@ class LogCollaboratorAdditionListener
     /**
      * Handle the event.
      *
-     * @param  CollaboratorAddedEvent  $event
      * @return void
      */
     public function handle(CollaboratorAddedEvent $event)

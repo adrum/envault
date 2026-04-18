@@ -10,7 +10,6 @@ class NotifyConfirmingNotificationsSetupListener
     /**
      * Handle the event.
      *
-     * @param  NotificationsSetUpEvent  $event
      * @return void
      */
     public function handle(NotificationsSetUpEvent $event)

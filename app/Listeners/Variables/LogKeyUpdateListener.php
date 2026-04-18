@@ -9,7 +9,6 @@ class LogKeyUpdateListener
     /**
      * Handle the event.
      *
-     * @param  KeyUpdatedEvent  $event
      * @return void
      */
     public function handle(KeyUpdatedEvent $event)

@@ -29,7 +29,6 @@ class RoleUpdatedEvent
     /**
      * Create a new event instance.
      *
-     * @param  User  $user
      * @param  string  $oldRole
      * @param  string  $newRole
      * @return void

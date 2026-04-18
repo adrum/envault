@@ -9,7 +9,6 @@ class UserObserver
     /**
      * Handle the user "force deleted" event.
      *
-     * @param  User  $user
      * @return void
      */
     public function forceDeleted(User $user)

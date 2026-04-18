@@ -25,8 +25,6 @@ class DeletedEvent
     /**
      * Create a new event instance.
      *
-     * @param  App  $app
-     * @param  Variable  $variable
      * @return void
      */
     public function __construct(App $app, Variable $variable)

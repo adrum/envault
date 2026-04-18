@@ -9,7 +9,6 @@ class LogCollaboratorRoleUpdateListener
     /**
      * Handle the event.
      *
-     * @param  CollaboratorRoleUpdatedEvent  $event
      * @return void
      */
     public function handle(CollaboratorRoleUpdatedEvent $event)

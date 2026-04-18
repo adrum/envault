@@ -9,7 +9,6 @@ class LogEmailUpdateListener
     /**
      * Handle the event.
      *
-     * @param  EmailUpdatedEvent  $event
      * @return void
      */
     public function handle(EmailUpdatedEvent $event)

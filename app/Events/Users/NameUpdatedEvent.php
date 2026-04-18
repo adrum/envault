@@ -29,7 +29,6 @@ class NameUpdatedEvent
     /**
      * Create a new event instance.
      *
-     * @param  User  $user
      * @param  string  $newName
      * @param  string  $oldName
      * @return void

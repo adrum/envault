@@ -10,7 +10,6 @@ class LogImportListener
     /**
      * Handle the event.
      *
-     * @param  ImportedEvent  $event
      * @return void
      */
     public function handle(ImportedEvent $event)

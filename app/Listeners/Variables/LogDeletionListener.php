@@ -9,7 +9,6 @@ class LogDeletionListener
     /**
      * Handle the event.
      *
-     * @param  DeletedEvent  $event
      * @return void
      */
     public function handle(DeletedEvent $event)

@@ -9,7 +9,6 @@ class LogCreationListener
     /**
      * Handle the event.
      *
-     * @param  CreatedEvent  $event
      * @return void
      */
     public function handle(CreatedEvent $event)

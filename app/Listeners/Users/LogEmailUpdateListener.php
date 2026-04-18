@@ -9,7 +9,7 @@ class LogEmailUpdateListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Users\EmailUpdatedEvent $event
+     * @param  EmailUpdatedEvent  $event
      * @return void
      */
     public function handle(EmailUpdatedEvent $event)

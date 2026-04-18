@@ -3,9 +3,9 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
 
 class AuthRequestedNotification extends Notification implements ShouldQueue
 {
@@ -19,7 +19,7 @@ class AuthRequestedNotification extends Notification implements ShouldQueue
     /**
      * Create a new notification instance.
      *
-     * @param string $token
+     * @param  string  $token
      * @return void
      */
     public function __construct($token)
@@ -30,7 +30,7 @@ class AuthRequestedNotification extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -41,21 +41,21 @@ class AuthRequestedNotification extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @param  mixed  $notifiable
+     * @return MailMessage
      */
     public function toMail($notifiable)
     {
-        return (new MailMessage())
-            ->subject('Sign in to '.config('app.name'))
-            ->line('Your code is '.$this->token)
+        return (new MailMessage)
+            ->subject('Sign in to ' . config('app.name'))
+            ->line('Your code is ' . $this->token)
             ->line('If you did not request to be authenticated, no further action is required.');
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

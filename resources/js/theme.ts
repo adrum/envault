@@ -43,7 +43,8 @@ const theme = createTheme({
   colors,
 
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-  fontFamilyMonospace: "Fira Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontFamilyMonospace:
+    "Fira Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
   headings: {
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   },

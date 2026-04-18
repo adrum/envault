@@ -9,7 +9,7 @@ class UserObserver
     /**
      * Handle the user "force deleted" event.
      *
-     * @param \App\Models\User $user
+     * @param  User  $user
      * @return void
      */
     public function forceDeleted(User $user)

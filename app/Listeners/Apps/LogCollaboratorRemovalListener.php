@@ -9,7 +9,7 @@ class LogCollaboratorRemovalListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Apps\CollaboratorRemovedEvent $event
+     * @param  CollaboratorRemovedEvent  $event
      * @return void
      */
     public function handle(CollaboratorRemovedEvent $event)

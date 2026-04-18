@@ -9,7 +9,7 @@ class LogRoleUpdateListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Users\RoleUpdatedEvent $event
+     * @param  RoleUpdatedEvent  $event
      * @return void
      */
     public function handle(RoleUpdatedEvent $event)

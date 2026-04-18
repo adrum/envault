@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
         App::factory()->count(50)->has(
             Variable::factory()->count(10)->has(
                 VariableVersion::factory(),
-            'versions'),
+                'versions'),
         )->create();
     }
 }

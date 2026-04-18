@@ -2,15 +2,15 @@
 
 namespace App\Listeners\Variables;
 
-use App\Events\Variables\ImportedEvent;
 use Illuminate\Support\Str;
+use App\Events\Variables\ImportedEvent;
 
 class LogImportListener
 {
     /**
      * Handle the event.
      *
-     * @param \App\Events\Variables\ImportedEvent $event
+     * @param  ImportedEvent  $event
      * @return void
      */
     public function handle(ImportedEvent $event)

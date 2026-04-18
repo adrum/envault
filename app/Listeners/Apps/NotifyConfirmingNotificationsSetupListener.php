@@ -10,11 +10,11 @@ class NotifyConfirmingNotificationsSetupListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Apps\NotificationsSetUpEvent $event
+     * @param  NotificationsSetUpEvent  $event
      * @return void
      */
     public function handle(NotificationsSetUpEvent $event)
     {
-        $event->app->notify(new AppNotificationsSetUpNotification());
+        $event->app->notify(new AppNotificationsSetUpNotification);
     }
 }

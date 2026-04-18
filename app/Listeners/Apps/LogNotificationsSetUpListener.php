@@ -9,7 +9,7 @@ class LogNotificationsSetUpListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Apps\NotificationsSetUpEvent $event
+     * @param  NotificationsSetUpEvent  $event
      * @return void
      */
     public function handle(NotificationsSetUpEvent $event)

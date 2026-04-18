@@ -3,9 +3,9 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\SlackMessage;
-use Illuminate\Notifications\Notification;
 
 class AppNotificationsSetUpNotification extends Notification implements ShouldQueue
 {
@@ -24,7 +24,7 @@ class AppNotificationsSetUpNotification extends Notification implements ShouldQu
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function via($notifiable)
@@ -35,8 +35,8 @@ class AppNotificationsSetUpNotification extends Notification implements ShouldQu
     /**
      * Get the Slack representation of the notification.
      *
-     * @param mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\SlackMessage
+     * @param  mixed  $notifiable
+     * @return SlackMessage
      */
     public function toSlack($notifiable)
     {
@@ -44,7 +44,7 @@ class AppNotificationsSetUpNotification extends Notification implements ShouldQu
 
         $configAppName = config('app.name');
 
-        return (new SlackMessage())
+        return (new SlackMessage)
             ->success()
             ->from(config('app.name'))
             ->to($channel)
@@ -60,7 +60,7 @@ class AppNotificationsSetUpNotification extends Notification implements ShouldQu
     /**
      * Get the array representation of the notification.
      *
-     * @param mixed $notifiable
+     * @param  mixed  $notifiable
      * @return array
      */
     public function toArray($notifiable)

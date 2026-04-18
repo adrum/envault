@@ -3,9 +3,9 @@
 namespace App\Events\Users;
 
 use App\Models\User;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Broadcasting\InteractsWithSockets;
 
 class RoleUpdatedEvent
 {
@@ -22,16 +22,16 @@ class RoleUpdatedEvent
     public $oldRole;
 
     /**
-     * @var \App\Models\User
+     * @var User
      */
     public $user;
 
     /**
      * Create a new event instance.
      *
-     * @param \App\Models\User $user
-     * @param string $oldRole
-     * @param string $newRole
+     * @param  User  $user
+     * @param  string  $oldRole
+     * @param  string  $newRole
      * @return void
      */
     public function __construct(User $user, $oldRole, $newRole)

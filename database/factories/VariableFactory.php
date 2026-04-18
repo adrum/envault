@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Variable;
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class VariableFactory extends Factory
 {

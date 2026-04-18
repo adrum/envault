@@ -9,7 +9,7 @@ class LogEntryObserver
     /**
      * Handle the log entry "created" event.
      *
-     * @param \App\Models\LogEntry $logEntry
+     * @param  LogEntry  $logEntry
      * @return void
      */
     public function created(LogEntry $logEntry)

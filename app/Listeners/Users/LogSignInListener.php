@@ -9,7 +9,7 @@ class LogSignInListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Users\SignedInEvent $event
+     * @param  SignedInEvent  $event
      * @return void
      */
     public function handle(SignedInEvent $event)

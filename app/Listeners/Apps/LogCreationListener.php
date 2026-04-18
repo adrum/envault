@@ -9,7 +9,7 @@ class LogCreationListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Apps\CreatedEvent $event
+     * @param  CreatedEvent  $event
      * @return void
      */
     public function handle(CreatedEvent $event)

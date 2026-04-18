@@ -9,7 +9,7 @@ class LogNotificationSettingsUpdateListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Apps\NotificationSettingsUpdatedEvent $event
+     * @param  NotificationSettingsUpdatedEvent  $event
      * @return void
      */
     public function handle(NotificationSettingsUpdatedEvent $event)

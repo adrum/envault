@@ -1,0 +1,13 @@
+**/storage
+**/vendor
+**/build
+**/node_modules
+**/dist
+pnpm-lock.yaml
+composer.json
+composer.lock
+package.json
+package-lock.json
+yarn.lock
+resources/views/mail/*
+resources/js/types/enums.ts

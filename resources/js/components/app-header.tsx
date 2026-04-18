@@ -1,0 +1,195 @@
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { useCurrentUrl } from "@/hooks/use-current-url";
+import { useInitials } from "@/hooks/use-initials";
+import { cn, toUrl } from "@/lib/utils";
+import type { BreadcrumbItem, NavItem } from "@/types";
+import { dashboard } from "@/wayfinder/routes";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import {
+  faBook,
+  faFolder,
+  faGridHorizontal,
+  faMagnifyingGlass,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Link, usePage } from "@inertiajs/react";
+import { Avatar, Burger, Button, Group, Menu } from "@mantine/core";
+import AppLogo from "./app-logo";
+import HeaderMenuButton from "./header-menu-button";
+import SidebarMenuButton from "./sidebar-menu-button";
+import { UserMenuContent } from "./user-menu-content";
+
+const InertiaLink: React.ElementType = Link;
+
+type Props = {
+  breadcrumbs?: BreadcrumbItem[];
+  opened: boolean;
+  toggle: () => void;
+};
+
+const mainNavItems: NavItem[] = [
+  {
+    title: "Dashboard",
+    href: dashboard(),
+    icon: faGridHorizontal,
+  },
+];
+
+const rightNavItems: (NavItem & { icon: IconDefinition })[] = [
+  {
+    title: "Repository",
+    href: "https://github.com/adrum/laravel-react-mantine-starter-kit",
+    icon: faFolder,
+  },
+  {
+    title: "Documentation",
+    href: "https://laravel.com/docs/starter-kits",
+    icon: faBook,
+  },
+];
+
+export function AppHeader({ breadcrumbs = [], opened, toggle }: Props) {
+  const page = usePage();
+  const { auth } = page.props;
+  const getInitials = useInitials();
+  const { isCurrentUrl } = useCurrentUrl();
+
+  return (
+    <>
+      <div className="flex h-full items-center justify-between px-6 md:mx-auto md:max-w-7xl md:px-4">
+        <Group h="100%">
+          <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+          <Group h="100%" justify="space-between" style={{ flex: 1 }}>
+            <HeaderMenuButton
+              component={InertiaLink}
+              prefetch
+              href={dashboard()}
+              className="bg-transparent! px-2!"
+            >
+              <AppLogo />
+            </HeaderMenuButton>
+            <Group h="100%" ml="xl" gap={0} visibleFrom="sm">
+              {mainNavItems.map((item) => (
+                <HeaderMenuButton
+                  key={toUrl(item.href)}
+                  component={InertiaLink}
+                  href={toUrl(item.href)}
+                  isActive={isCurrentUrl(toUrl(item.href))}
+                  leftSection={
+                    item.icon && (
+                      <FontAwesomeIcon icon={item.icon} className="size-5" />
+                    )
+                  }
+                >
+                  {item.title}
+                </HeaderMenuButton>
+              ))}
+            </Group>
+          </Group>
+        </Group>
+        <div className="flex h-full items-center md:gap-x-2">
+          <HeaderMenuButton
+            tooltip="Search"
+            classNames={{
+              root: "bg-transparent! hover:bg-muted! px-2!",
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faMagnifyingGlass}
+              color="var(--foreground)"
+              className="!size-5 opacity-80 group-hover:opacity-100"
+            />
+          </HeaderMenuButton>
+          {rightNavItems.map((item) => (
+            <HeaderMenuButton
+              key={toUrl(item.href)}
+              component={InertiaLink}
+              href={toUrl(item.href)}
+              isActive={isCurrentUrl(toUrl(item.href))}
+              tooltip={item.title}
+              classNames={{
+                root: "bg-transparent! hover:bg-muted! px-2! hidden! md:block!",
+              }}
+            >
+              <FontAwesomeIcon icon={item.icon} className="size-5" />
+            </HeaderMenuButton>
+          ))}
+
+          {auth.user && (
+            <Menu
+              shadow="md"
+              width={230}
+              position={"bottom-end"}
+              classNames={{ dropdown: "border-1! -mt-2" }}
+            >
+              <Menu.Target>
+                <SidebarMenuButton
+                  component="button"
+                  className={cn("group h-12! p-0.5! px-1!")}
+                  classNames={{
+                    inner: "items-stretch! justify-between!",
+                  }}
+                >
+                  <Avatar
+                    src={auth.user.avatar}
+                    name={getInitials(auth.user.name)}
+                    size="md"
+                    radius="xl"
+                    imageProps={{
+                      src: auth.user.avatar,
+                      alt: auth.user.name,
+                    }}
+                  />
+                </SidebarMenuButton>
+              </Menu.Target>
+              <UserMenuContent user={auth.user} />
+            </Menu>
+          )}
+        </div>
+      </div>
+      {breadcrumbs && breadcrumbs.length > 1 && (
+        <div className="flex w-full border-b border-sidebar-border/70">
+          <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
+            <Breadcrumbs breadcrumbs={breadcrumbs} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export function AppHeaderNavBar() {
+  return (
+    <div className="flex h-full flex-col justify-between">
+      <div className="flex flex-col gap-y-2">
+        {mainNavItems.map((item) => (
+          <HeaderMenuButton
+            key={toUrl(item.href)}
+            component={InertiaLink}
+            href={toUrl(item.href)}
+          >
+            {item.title}
+          </HeaderMenuButton>
+        ))}
+      </div>
+      <div className="flex flex-col gap-y-2">
+        {rightNavItems.map((item) => (
+          <Button
+            key={toUrl(item.href)}
+            renderRoot={(props) => <Link {...props} href={item.href} />}
+            justify="start"
+            size="sm"
+            leftSection={
+              <FontAwesomeIcon icon={item.icon} className="size-5" />
+            }
+            classNames={{
+              root: "bg-transparent! hover:bg-muted!",
+            }}
+          >
+            {item.title}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}

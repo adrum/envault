@@ -3,12 +3,17 @@
 namespace App\Models;
 
 use App\Observers\AppObserver;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+#[ObservedBy([AppObserver::class])]
 class App extends Model
 {
     use HasFactory;
@@ -18,72 +23,45 @@ class App extends Model
     /**
      * The attributes that aren't mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $guarded = [];
 
-    /**
-     * The "booting" method of the model.
-     *
-     * @return void
-     */
-    protected static function boot()
-    {
-        parent::boot();
-        
-        static::observe(AppObserver::class);
-    }
-
-    /**
-     * @return bool
-     */
-    public function notificationsEnabled()
+    public function notificationsEnabled(): bool
     {
         return $this->slack_notification_channel && $this->slack_notification_webhook_url;
     }
 
-    /**
-     * @param \Illuminate\Notifications\Notification $notification
-     * @return string
-     */
-    public function routeNotificationForSlack(Notification $notification)
+    public function routeNotificationForSlack(Notification $notification): ?string
     {
         return $this->slack_notification_webhook_url;
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
-     */
-    public function collaborators()
+    public function collaborators(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'app_collaborators')
-            ->withPivot([
-                'role',
-            ])
+            ->withPivot(['role'])
             ->withTimestamps();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
-     */
-    public function log()
+    public function log(): MorphMany
     {
         return $this->morphMany(LogEntry::class, 'loggable');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany<AppSetupToken, $this>
      */
-    public function setup_tokens()
+    public function setup_tokens(): HasMany
     {
         return $this->hasMany(AppSetupToken::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany<Variable, $this>
      */
-    public function variables()
+    public function variables(): HasMany
     {
-        return $this->hasMany(Variable::class);
+        return $this->hasMany(Variable::class)->orderBy('sort_order');
     }
 }

@@ -1,0 +1,18 @@
+import AppLogoIcon from "./app-logo-icon";
+
+export default function AppLogoLabel({ name = undefined }: { name?: string }) {
+  return (
+    <div className="flex items-center justify-start gap-x-2 py-1">
+      <div className="light:bg-sidebar-primary flex aspect-square size-8 items-center justify-center rounded-md text-sidebar-primary-foreground">
+        <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+      </div>
+      {name && (
+        <div className="ml-1 grid flex-1 text-left text-sm">
+          <span className="mb-0.5 truncate leading-tight font-semibold text-foreground">
+            {name}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

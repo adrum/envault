@@ -2,12 +2,19 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use App\Observers\UserObserver;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable
@@ -16,6 +23,7 @@ class User extends Authenticatable
     use HasFactory;
     use Notifiable;
     use SoftDeletes;
+    use TwoFactorAuthenticatable;
 
     /**
      * The attributes that aren't mass assignable.
@@ -29,90 +37,86 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
-     * @return string
+     * @var array<string, string>
      */
-    public function getFullNameAttribute()
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'password' => 'hashed',
+        'role' => UserRole::class,
+    ];
+
+    /** @return Attribute<non-falsy-string, never> */
+    protected function name(): Attribute
     {
-        return $this->first_name.' '.$this->last_name;
+        return Attribute::get(fn (): string => $this->first_name . ' ' . $this->last_name);
     }
 
-    /**
-     * @return bool
-     */
-    public function isAdminOrOwner()
+    /** @return Attribute<non-falsy-string, never> */
+    protected function fullName(): Attribute
     {
-        return $this->role == 'admin' || $this->role == 'owner' ? true : false;
+        return Attribute::get(fn (): string => $this->first_name . ' ' . $this->last_name);
     }
 
-    /**
-     * @param \App\Models\App $app
-     * @return bool|mixed
-     */
-    public function isAppAdmin(App $app)
+    /** @return Attribute<bool, never> */
+    protected function twoFactorEnabled(): Attribute
     {
-        return $this->app_collaborations()->newPivotStatementForId($app->id)->first()->role ?? null == 'admin' ? true : false;
+        return Attribute::get(fn (): bool => !is_null($this->two_factor_confirmed_at));
     }
 
-    /**
-     * @param \App\Models\App $app
-     * @return bool
-     */
-    public function isAppCollaborator(App $app)
+    /** @return Attribute<bool, never> */
+    protected function hasPassword(): Attribute
     {
-        return (bool) $this->app_collaborations()->newPivotStatementForId($app->id)->first();
+        return Attribute::get(fn (): bool => !is_null($this->password));
     }
 
-    /**
-     * @return bool
-     */
-    public function isOwner()
+    public function isAdminOrOwner(): bool
     {
-        return $this->role == 'owner';
+        return in_array($this->role, [UserRole::ADMIN, UserRole::OWNER]);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function actions()
+    public function isOwner(): bool
+    {
+        return $this->role === UserRole::OWNER;
+    }
+
+    public function isAppAdmin(App $app): bool
+    {
+        /** @var App|null $related */
+        $related = $this->app_collaborations()->wherePivot('app_id', $app->id)->first();
+
+        return $related !== null && $related->getAttribute('pivot')->getAttribute('role') === 'admin';
+    }
+
+    public function isAppCollaborator(App $app): bool
+    {
+        return $this->app_collaborations()->wherePivot('app_id', $app->id)->exists();
+    }
+
+    public function actions(): HasMany
     {
         return $this->hasMany(LogEntry::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
-     */
-    public function app_collaborations()
+    public function app_collaborations(): BelongsToMany
     {
         return $this->belongsToMany(App::class, 'app_collaborators')
-            ->withPivot([
-                'role',
-            ])
+            ->withPivot(['role'])
             ->withTimestamps();
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function app_setup_tokens()
+    public function app_setup_tokens(): HasMany
     {
         return $this->hasMany(AppSetupToken::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function auth_requests()
-    {
-        return $this->hasMany(AuthRequest::class);
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
-     */
-    public function log()
+    public function log(): MorphMany
     {
         return $this->morphMany(LogEntry::class, 'loggable');
     }

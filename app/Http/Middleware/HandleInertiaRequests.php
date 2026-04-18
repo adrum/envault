@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Inertia\Inertia;
 use Inertia\Middleware;
 use Illuminate\Http\Request;
+use Laravel\Fortify\Features;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -54,6 +55,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'can' => [
                 'administrate' => $user?->can('administrate') ?? false,
+            ],
+            'features' => [
+                'passwordAuthentication' => Features::enabled(Features::updatePasswords()),
+                'laravelPassportSso' => filled(config('services.laravelpassport.client_id')),
             ],
         ];
     }

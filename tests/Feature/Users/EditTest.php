@@ -1,102 +1,77 @@
 <?php
 
-namespace Tests\Feature\Users;
-
 use App\Models\User;
-use Livewire\Livewire;
-use Tests\TestCase;
 
-class EditTest extends TestCase
-{
-    protected $authenticatedUser;
+beforeEach(function () {
+    $this->authenticatedUser = User::factory()->state(['role' => 'owner'])->create();
+    $this->actingAs($this->authenticatedUser);
+});
 
-    /** @test */
-    public function can_update_user()
-    {
-        $userToUpdate = User::factory()->create();
+test('can update user', function () {
+    $userToUpdate = User::factory()->create();
 
-        $newDetails = $userToUpdate;
+    $this->patch(route('users.update', $userToUpdate), [
+        'email' => $userToUpdate->email,
+        'first_name' => $userToUpdate->first_name,
+        'last_name' => $userToUpdate->last_name,
+        'role' => 'admin',
+    ])->assertRedirect();
 
-        Livewire::test('users.edit', ['user' => $userToUpdate])
-            ->set('email', $newDetails->email)
-            ->set('firstName', $newDetails->first_name)
-            ->set('lastName', $newDetails->last_name)
-            ->set('role', 'admin')
-            ->call('update')
-            ->assertEmitted('user.updated', $userToUpdate->id);
+    $this->assertDatabaseHas('users', [
+        'id' => $userToUpdate->id,
+        'email' => $userToUpdate->email,
+        'first_name' => $userToUpdate->first_name,
+        'last_name' => $userToUpdate->last_name,
+        'role' => 'admin',
+    ]);
+});
 
-        $this->assertDatabaseHas('users', [
-            'id' => $userToUpdate->id,
-            'email' => $newDetails->email,
-            'first_name' => $newDetails->first_name,
-            'last_name' => $newDetails->last_name,
-            'role' => 'admin',
-        ]);
-    }
+test('email is email', function () {
+    $userToUpdate = User::factory()->create();
 
-    /** @test */
-    public function email_is_email()
-    {
-        $userToUpdate = User::factory()->create();
+    $this->patch(route('users.update', $userToUpdate), [
+        'email' => 'email',
+        'first_name' => $userToUpdate->first_name,
+        'last_name' => $userToUpdate->last_name,
+    ])->assertSessionHasErrors('email');
+});
 
-        Livewire::test('users.edit', ['user' => $userToUpdate])
-            ->set('email', 'email')
-            ->call('update')
-            ->assertHasErrors(['email' => 'email']);
-    }
+test('email is required', function () {
+    $userToUpdate = User::factory()->create();
 
-    /** @test */
-    public function email_is_required()
-    {
-        $userToUpdate = User::factory()->create();
+    $this->patch(route('users.update', $userToUpdate), [
+        'email' => '',
+        'first_name' => $userToUpdate->first_name,
+        'last_name' => $userToUpdate->last_name,
+    ])->assertSessionHasErrors('email');
+});
 
-        Livewire::test('users.edit', ['user' => $userToUpdate])
-            ->set('email', '')
-            ->call('update')
-            ->assertHasErrors(['email' => 'required']);
-    }
+test('email is unique', function () {
+    $userToUpdate = User::factory()->create();
 
-    /** @test */
-    public function email_is_unique()
-    {
-        $userToUpdate = User::factory()->create();
+    $this->patch(route('users.update', $userToUpdate), [
+        'email' => $this->authenticatedUser->email,
+        'first_name' => $userToUpdate->first_name,
+        'last_name' => $userToUpdate->last_name,
+    ])->assertSessionHasErrors('email');
+});
 
-        Livewire::test('users.edit', ['user' => $userToUpdate])
-            ->set('email', $this->authenticatedUser->email)
-            ->call('update')
-            ->assertHasErrors(['email' => 'unique']);
-    }
+test('first name is required', function () {
+    $userToUpdate = User::factory()->create();
 
-    /** @test */
-    public function first_name_is_required()
-    {
-        $userToUpdate = User::factory()->create();
+    $this->patch(route('users.update', $userToUpdate), [
+        'email' => $userToUpdate->email,
+        'first_name' => '',
+        'last_name' => $userToUpdate->last_name,
+    ])->assertSessionHasErrors('first_name');
+});
 
-        Livewire::test('users.edit', ['user' => $userToUpdate])
-            ->set('firstName', '')
-            ->call('update')
-            ->assertHasErrors(['firstName' => 'required']);
-    }
+test('last name is required', function () {
+    $userToUpdate = User::factory()->create();
 
-    /** @test */
-    public function last_name_is_required()
-    {
-        $userToUpdate = User::factory()->create();
-
-        Livewire::test('users.edit', ['user' => $userToUpdate])
-            ->set('lastName', '')
-            ->call('update')
-            ->assertHasErrors(['lastName' => 'required']);
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->authenticatedUser = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
-
-        Livewire::actingAs($this->authenticatedUser);
-    }
-}
+    $this->patch(route('users.update', $userToUpdate), [
+        'email' => $userToUpdate->email,
+        'first_name' => $userToUpdate->first_name,
+        'last_name' => '',
+    ])->assertSessionHasErrors('last_name');
+});

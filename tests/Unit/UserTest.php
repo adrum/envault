@@ -1,114 +1,88 @@
 <?php
 
-namespace Tests\Unit;
-
 use App\Models\App;
 use App\Models\User;
-use Tests\TestCase;
 
-class UserTest extends TestCase
-{
-    /** @test */
-    public function full_name_determined()
-    {
-        $user = User::factory()->create();
+test('full name determined', function () {
+    $user = User::factory()->create();
 
-        $this->assertEquals($user->full_name, $user->first_name.' '.$user->last_name);
-    }
+    expect($user->first_name . ' ' . $user->last_name)->toEqual($user->full_name);
+});
 
-    /** @test */
-    public function admin_or_owner_status_determined_for_admin()
-    {
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+test('admin or owner status determined for admin', function () {
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue($user->isAdminOrOwner());
-    }
+    expect($user->isAdminOrOwner())->toBeTrue();
+});
 
-    /** @test */
-    public function admin_or_owner_status_determined_for_owner()
-    {
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+test('admin or owner status determined for owner', function () {
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertTrue($user->isAdminOrOwner());
-    }
+    expect($user->isAdminOrOwner())->toBeTrue();
+});
 
-    /** @test */
-    public function admin_or_owner_status_determined_for_not_admin_or_owner()
-    {
-        $user = User::factory()->create();
+test('admin or owner status determined for not admin or owner', function () {
+    $user = User::factory()->create();
 
-        $this->assertFalse($user->isAdminOrOwner());
-    }
+    expect($user->isAdminOrOwner())->toBeFalse();
+});
 
-    /** @test */
-    public function app_admin_status_determined_for_app_admin()
-    {
-        $user = User::factory()->create();
+test('app admin status determined for app admin', function () {
+    $user = User::factory()->create();
 
-        $app = App::factory()->create();
+    $app = App::factory()->create();
 
-        $app->collaborators()->attach($user, [
-            'role' => 'admin',
-        ]);
+    $app->collaborators()->attach($user, [
+        'role' => 'admin',
+    ]);
 
-        $this->assertTrue($user->isAppAdmin($app));
-    }
+    expect($user->isAppAdmin($app))->toBeTrue();
+});
 
-    /** @test */
-    public function app_admin_status_determined_for_not_app_admin()
-    {
-        $user = User::factory()->create();
+test('app admin status determined for not app admin', function () {
+    $user = User::factory()->create();
 
-        $app = App::factory()->create();
+    $app = App::factory()->create();
 
-        $this->assertFalse($user->isAppAdmin($app));
+    expect($user->isAppAdmin($app))->toBeFalse();
 
-        $app->collaborators()->attach($user);
+    $app->collaborators()->attach($user);
 
-        $this->assertFalse($user->isAppAdmin($app));
-    }
+    expect($user->isAppAdmin($app))->toBeFalse();
+});
 
-    /** @test */
-    public function app_collabortator_status_determined_for_app_collabortator()
-    {
-        $user = User::factory()->create();
+test('app collabortator status determined for app collabortator', function () {
+    $user = User::factory()->create();
 
-        $app = App::factory()->create();
+    $app = App::factory()->create();
 
-        $app->collaborators()->attach($user);
+    $app->collaborators()->attach($user);
 
-        $this->assertTrue($user->isAppCollaborator($app));
-    }
+    expect($user->isAppCollaborator($app))->toBeTrue();
+});
 
-    /** @test */
-    public function app_collabortator_status_determined_for_not_app_collabortator()
-    {
-        $user = User::factory()->create();
+test('app collabortator status determined for not app collabortator', function () {
+    $user = User::factory()->create();
 
-        $app = App::factory()->create();
+    $app = App::factory()->create();
 
-        $this->assertFalse($user->isAppCollaborator($app));
-    }
+    expect($user->isAppCollaborator($app))->toBeFalse();
+});
 
-    /** @test */
-    public function owner_status_determined_for_owner()
-    {
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+test('owner status determined for owner', function () {
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertTrue($user->isOwner());
-    }
+    expect($user->isOwner())->toBeTrue();
+});
 
-    /** @test */
-    public function owner_status_determined_for_not_owner()
-    {
-        $user = User::factory()->create();
+test('owner status determined for not owner', function () {
+    $user = User::factory()->create();
 
-        $this->assertFalse($user->isOwner());
-    }
-}
+    expect($user->isOwner())->toBeFalse();
+});

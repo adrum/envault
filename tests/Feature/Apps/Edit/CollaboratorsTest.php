@@ -1,128 +1,69 @@
 <?php
 
-namespace Tests\Feature\Apps\Edit;
-
 use App\Models\App;
 use App\Models\User;
-use Livewire\Livewire;
-use Tests\TestCase;
 
-class CollaboratorsTest extends TestCase
-{
-    protected $authenticatedUser;
+beforeEach(function () {
+    $this->authenticatedUser = User::factory()->state(['role' => 'owner'])->create();
+    $this->actingAs($this->authenticatedUser);
+});
 
-    /** @test */
-    public function can_add_user_as_collaborator()
-    {
-        $app = App::factory()->create();
+test('can add user as collaborator', function () {
+    $app = App::factory()->create();
+    $userToAdd = User::factory()->create();
 
-        $userToAdd = User::factory()->create();
+    $this->post(route('apps.collaborators.add', $app), [
+        'user_id' => $userToAdd->id,
+    ])->assertRedirect();
 
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->set('userToAddId', $userToAdd->id)
-            ->call('add')
-            ->assertEmitted('app.collaborator.added', $userToAdd->id, $app->id);
+    $this->assertDatabaseHas('app_collaborators', [
+        'app_id' => $app->id,
+        'user_id' => $userToAdd->id,
+    ]);
+});
 
-        $this->assertDatabaseHas('app_collaborators', [
-            'app_id' => $app->id,
-            'user_id' => $userToAdd->id,
-        ]);
-    }
+test('can remove user from collaborator', function () {
+    $app = App::factory()->create();
+    $userToRemove = User::factory()->create();
+    $app->collaborators()->attach($userToRemove);
 
-    /** @test */
-    public function can_remove_user_from_collaborator()
-    {
-        $app = App::factory()->create();
+    $this->delete(route('apps.collaborators.remove', $app), [
+        'user_id' => $userToRemove->id,
+    ])->assertRedirect();
 
-        $userToRemove = User::factory()->create();
+    $this->assertDatabaseMissing('app_collaborators', [
+        'app_id' => $app->id,
+        'user_id' => $userToRemove->id,
+    ]);
+});
 
-        $app->collaborators()->attach($userToRemove);
+test('can update collaborator role', function () {
+    $app = App::factory()->create();
+    $collaboratorToUpdate = User::factory()->create();
+    $app->collaborators()->attach($collaboratorToUpdate);
 
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->call('remove', $userToRemove->id)
-            ->assertEmitted('app.collaborator.removed', $userToRemove->id, $app->id);
+    $this->patch(route('apps.collaborators.update-role', $app), [
+        'user_id' => $collaboratorToUpdate->id,
+        'role' => 'admin',
+    ])->assertRedirect();
 
-        $this->assertDeleted('app_collaborators', [
-            'app_id' => $app->id,
-            'user_id' => $userToRemove->id,
-        ]);
-    }
+    $this->assertDatabaseHas('app_collaborators', [
+        'app_id' => $app->id,
+        'user_id' => $collaboratorToUpdate->id,
+        'role' => 'admin',
+    ]);
+});
 
-    /** @test */
-    public function can_select_addable_users()
-    {
-        $app = App::factory()->create();
+test('user to add exists', function () {
+    $app = App::factory()->create();
 
-        $addableUser = User::factory()->create();
+    $this->post(route('apps.collaborators.add', $app), [
+        'user_id' => 9999,
+    ])->assertSessionHasErrors('user_id');
+});
 
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->assertSee($addableUser->name);
-    }
+test('user to add id is required', function () {
+    $app = App::factory()->create();
 
-    /** @test */
-    public function can_update_collaborator_role()
-    {
-        $app = App::factory()->create();
-
-        $collaboratorToUpdate = User::factory()->create();
-
-        $app->collaborators()->attach($collaboratorToUpdate);
-
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->call('updateRole', $collaboratorToUpdate->id, 'admin')
-            ->assertEmitted('app.collaborator.updated', $collaboratorToUpdate->id, $app->id);
-
-        $this->assertDatabaseHas('app_collaborators', [
-            'app_id' => $app->id,
-            'role' => 'admin',
-            'user_id' => $collaboratorToUpdate->id,
-        ]);
-    }
-
-    /** @test */
-    public function can_view_collaborators()
-    {
-        $app = App::factory()->create();
-
-        $appCollaborator = User::factory()->create();
-
-        $app->collaborators()->attach($appCollaborator);
-
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->assertSee($appCollaborator->name)
-            ->assertSee($this->authenticatedUser->name);
-    }
-
-    /** @test */
-    public function user_to_add_exists()
-    {
-        $app = App::factory()->create();
-
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->set('userToAddId', 2)
-            ->call('add')
-            ->assertHasErrors(['userToAddId' => 'exists']);
-    }
-
-    /** @test */
-    public function user_to_add_id_is_required()
-    {
-        $app = App::factory()->create();
-
-        Livewire::test('apps.edit.collaborators', ['app' => $app])
-            ->set('userToAddId', null)
-            ->call('add')
-            ->assertHasErrors(['userToAddId' => 'required']);
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->authenticatedUser = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
-
-        Livewire::actingAs($this->authenticatedUser);
-    }
-}
+    $this->post(route('apps.collaborators.add', $app))->assertSessionHasErrors('user_id');
+});

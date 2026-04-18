@@ -1,156 +1,132 @@
 <?php
 
-namespace Tests\Unit\Policies;
-
 use App\Models\App;
 use App\Models\User;
 use App\Models\Variable;
 use App\Policies\VariablePolicy;
-use Tests\TestCase;
 
-class VariablePolicyTest extends TestCase
-{
-    /** @test */
-    public function admin_or_owner_can_delete_variables()
-    {
-        $app = App::factory()->create();
+test('admin or owner can delete variables', function () {
+    $app = App::factory()->create();
 
-        $variableToDelete = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToDelete = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new VariablePolicy)->delete($user, $variableToDelete));
+    expect((new VariablePolicy)->delete($user, $variableToDelete))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new VariablePolicy)->delete($user, $variableToDelete));
-    }
+    expect((new VariablePolicy)->delete($user, $variableToDelete))->toBeTrue();
+});
 
-    /** @test */
-    public function app_admin_can_delete_variables()
-    {
-        $app = App::factory()->create();
+test('app admin can delete variables', function () {
+    $app = App::factory()->create();
 
-        $variableToDelete = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToDelete = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $app->collaborators()->attach($user, [
-            'role' => 'admin',
-        ]);
+    $app->collaborators()->attach($user, [
+        'role' => 'admin',
+    ]);
 
-        $this->assertTrue((new VariablePolicy)->delete($user, $variableToDelete));
-    }
+    expect((new VariablePolicy)->delete($user, $variableToDelete))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_or_app_admin_cant_delete_variables()
-    {
-        $app = App::factory()->create();
+test('not admin or owner or app admin cant delete variables', function () {
+    $app = App::factory()->create();
 
-        $variableToDelete = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToDelete = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new VariablePolicy)->delete($user, $variableToDelete));
+    expect((new VariablePolicy)->delete($user, $variableToDelete))->toBeFalse();
 
-        $app->collaborators()->attach($user);
+    $app->collaborators()->attach($user);
 
-        $this->assertFalse((new VariablePolicy)->delete($user, $variableToDelete));
-    }
+    expect((new VariablePolicy)->delete($user, $variableToDelete))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_update_variables()
-    {
-        $app = App::factory()->create();
+test('admin or owner can update variables', function () {
+    $app = App::factory()->create();
 
-        $variableToUpdate = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToUpdate = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new VariablePolicy)->update($user, $variableToUpdate));
+    expect((new VariablePolicy)->update($user, $variableToUpdate))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new VariablePolicy)->update($user, $variableToUpdate));
-    }
+    expect((new VariablePolicy)->update($user, $variableToUpdate))->toBeTrue();
+});
 
-    /** @test */
-    public function app_admin_can_update_variables()
-    {
-        $app = App::factory()->create();
+test('app admin can update variables', function () {
+    $app = App::factory()->create();
 
-        $variableToUpdate = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToUpdate = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $app->collaborators()->attach($user, [
-            'role' => 'admin',
-        ]);
+    $app->collaborators()->attach($user, [
+        'role' => 'admin',
+    ]);
 
-        $this->assertTrue((new VariablePolicy)->update($user, $variableToUpdate));
-    }
+    expect((new VariablePolicy)->update($user, $variableToUpdate))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_or_app_admin_cant_update_variables()
-    {
-        $app = App::factory()->create();
+test('not admin or owner or app admin cant update variables', function () {
+    $app = App::factory()->create();
 
-        $variableToUpdate = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToUpdate = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new VariablePolicy)->update($user, $variableToUpdate));
+    expect((new VariablePolicy)->update($user, $variableToUpdate))->toBeFalse();
 
-        $app->collaborators()->attach($user);
+    $app->collaborators()->attach($user);
 
-        $this->assertFalse((new VariablePolicy)->update($user, $variableToUpdate));
-    }
+    expect((new VariablePolicy)->update($user, $variableToUpdate))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_view_variable()
-    {
-        $app = App::factory()->create();
+test('admin or owner can view variable', function () {
+    $app = App::factory()->create();
 
-        $variableToView = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToView = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new VariablePolicy)->view($user, $variableToView));
+    expect((new VariablePolicy)->view($user, $variableToView))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new VariablePolicy)->view($user, $variableToView));
-    }
+    expect((new VariablePolicy)->view($user, $variableToView))->toBeTrue();
+});
 
-    /** @test */
-    public function app_collaborator_can_view_variable()
-    {
-        $app = App::factory()->create();
+test('app collaborator can view variable', function () {
+    $app = App::factory()->create();
 
-        $variableToView = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToView = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $app->collaborators()->attach($user);
+    $app->collaborators()->attach($user);
 
-        $this->assertTrue((new VariablePolicy)->view($user, $variableToView));
-    }
+    expect((new VariablePolicy)->view($user, $variableToView))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_or_app_collaborator_cant_view_variable()
-    {
-        $app = App::factory()->create();
+test('not admin or owner or app collaborator cant view variable', function () {
+    $app = App::factory()->create();
 
-        $variableToView = $app->variables()->create(Variable::factory()->make()->toArray());
+    $variableToView = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new VariablePolicy)->view($user, $variableToView));
-    }
-}
+    expect((new VariablePolicy)->view($user, $variableToView))->toBeFalse();
+});

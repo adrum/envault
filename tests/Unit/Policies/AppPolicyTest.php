@@ -1,241 +1,199 @@
 <?php
 
-namespace Tests\Unit\Policies;
-
 use App\Models\App;
 use App\Models\User;
 use App\Policies\AppPolicy;
-use Tests\TestCase;
 
-class AppPolicyTest extends TestCase
-{
-    /** @test */
-    public function admin_or_owner_can_create_app()
-    {
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+test('admin or owner can create app', function () {
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->create($user));
+    expect((new AppPolicy)->create($user))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->create($user));
-    }
+    expect((new AppPolicy)->create($user))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_create_app()
-    {
-        $user = User::factory()->create();
+test('not admin or owner cant create app', function () {
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->create($user));
-    }
+    expect((new AppPolicy)->create($user))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_create_variables()
-    {
-        $appToCreateVariablesFor = App::factory()->create();
+test('admin or owner can create variables', function () {
+    $appToCreateVariablesFor = App::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->createVariable($user, $appToCreateVariablesFor));
+    expect((new AppPolicy)->createVariable($user, $appToCreateVariablesFor))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->createVariable($user, $appToCreateVariablesFor));
-    }
+    expect((new AppPolicy)->createVariable($user, $appToCreateVariablesFor))->toBeTrue();
+});
 
-    /** @test */
-    public function app_admin_can_create_variables()
-    {
-        $appToCreateVariablesFor = App::factory()->create();
+test('app admin can create variables', function () {
+    $appToCreateVariablesFor = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $appToCreateVariablesFor->collaborators()->attach($user, [
-            'role' => 'admin',
-        ]);
+    $appToCreateVariablesFor->collaborators()->attach($user, [
+        'role' => 'admin',
+    ]);
 
-        $this->assertTrue((new AppPolicy)->createVariable($user, $appToCreateVariablesFor));
-    }
+    expect((new AppPolicy)->createVariable($user, $appToCreateVariablesFor))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_or_app_admin_cant_create_variables()
-    {
-        $appToCreateVariablesFor = App::factory()->create();
+test('not admin or owner or app admin cant create variables', function () {
+    $appToCreateVariablesFor = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->createVariable($user, $appToCreateVariablesFor));
+    expect((new AppPolicy)->createVariable($user, $appToCreateVariablesFor))->toBeFalse();
 
-        $appToCreateVariablesFor->collaborators()->attach($user);
+    $appToCreateVariablesFor->collaborators()->attach($user);
 
-        $this->assertFalse((new AppPolicy)->createVariable($user, $appToCreateVariablesFor));
-    }
+    expect((new AppPolicy)->createVariable($user, $appToCreateVariablesFor))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_delete_app()
-    {
-        $appToDelete = App::factory()->create();
+test('admin or owner can delete app', function () {
+    $appToDelete = App::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->delete($user, $appToDelete));
+    expect((new AppPolicy)->delete($user, $appToDelete))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->delete($user, $appToDelete));
-    }
+    expect((new AppPolicy)->delete($user, $appToDelete))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_delete_app()
-    {
-        $appToDelete = App::factory()->create();
+test('not admin or owner cant delete app', function () {
+    $appToDelete = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->delete($user, $appToDelete));
-    }
+    expect((new AppPolicy)->delete($user, $appToDelete))->toBeFalse();
+});
 
-    /** @test */
-    public function owner_can_force_delete_app()
-    {
-        $appToForceDelete = App::factory()->create();
+test('owner can force delete app', function () {
+    $appToForceDelete = App::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->forceDelete($user, $appToForceDelete));
-    }
+    expect((new AppPolicy)->forceDelete($user, $appToForceDelete))->toBeTrue();
+});
 
-    /** @test */
-    public function not_owner_cant_force_delete_app()
-    {
-        $appToForceDelete = App::factory()->create();
+test('not owner cant force delete app', function () {
+    $appToForceDelete = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->forceDelete($user, $appToForceDelete));
+    expect((new AppPolicy)->forceDelete($user, $appToForceDelete))->toBeFalse();
 
-        $user->role = 'admin';
+    $user->role = 'admin';
 
-        $this->assertFalse((new AppPolicy)->forceDelete($user, $appToForceDelete));
-    }
+    expect((new AppPolicy)->forceDelete($user, $appToForceDelete))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_restore_app()
-    {
-        $appToRestore = App::factory()->create();
+test('admin or owner can restore app', function () {
+    $appToRestore = App::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->restore($user, $appToRestore));
+    expect((new AppPolicy)->restore($user, $appToRestore))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->restore($user, $appToRestore));
-    }
+    expect((new AppPolicy)->restore($user, $appToRestore))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_restore_app()
-    {
-        $appToRestore = App::factory()->create();
+test('not admin or owner cant restore app', function () {
+    $appToRestore = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->restore($user, $appToRestore));
-    }
+    expect((new AppPolicy)->restore($user, $appToRestore))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_update_app()
-    {
-        $appToUpdate = App::factory()->create();
+test('admin or owner can update app', function () {
+    $appToUpdate = App::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->update($user, $appToUpdate));
+    expect((new AppPolicy)->update($user, $appToUpdate))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->update($user, $appToUpdate));
-    }
+    expect((new AppPolicy)->update($user, $appToUpdate))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_update_app()
-    {
-        $appToUpdate = App::factory()->create();
+test('not admin or owner cant update app', function () {
+    $appToUpdate = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->update($user, $appToUpdate));
-    }
+    expect((new AppPolicy)->update($user, $appToUpdate))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_view_app()
-    {
-        $appToView = App::factory()->create();
+test('admin or owner can view app', function () {
+    $appToView = App::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->view($user, $appToView));
+    expect((new AppPolicy)->view($user, $appToView))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->view($user, $appToView));
-    }
+    expect((new AppPolicy)->view($user, $appToView))->toBeTrue();
+});
 
-    /** @test */
-    public function app_collaborator_can_view_app()
-    {
-        $appToView = App::factory()->create();
+test('app collaborator can view app', function () {
+    $appToView = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $appToView->collaborators()->attach($user);
+    $appToView->collaborators()->attach($user);
 
-        $this->assertTrue((new AppPolicy)->view($user, $appToView));
-    }
+    expect((new AppPolicy)->view($user, $appToView))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_or_app_collaborator_cant_view_app()
-    {
-        $appToView = App::factory()->create();
+test('not admin or owner or app collaborator cant view app', function () {
+    $appToView = App::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->view($user, $appToView));
-    }
+    expect((new AppPolicy)->view($user, $appToView))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_view_all_app()
-    {
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+test('admin or owner can view all app', function () {
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new AppPolicy)->viewAll($user));
+    expect((new AppPolicy)->viewAll($user))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new AppPolicy)->viewAll($user));
-    }
+    expect((new AppPolicy)->viewAll($user))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_view_all_apps()
-    {
-        $user = User::factory()->create();
+test('not admin or owner cant view all apps', function () {
+    $user = User::factory()->create();
 
-        $this->assertFalse((new AppPolicy)->viewAll($user));
-    }
-}
+    expect((new AppPolicy)->viewAll($user))->toBeFalse();
+});

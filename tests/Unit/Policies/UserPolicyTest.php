@@ -1,202 +1,164 @@
 <?php
 
-namespace Tests\Unit\Policies;
-
 use App\Models\User;
 use App\Policies\UserPolicy;
-use Tests\TestCase;
 
-class UserPolicyTest extends TestCase
-{
-    /** @test */
-    public function admin_or_owner_can_create_user()
-    {
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+test('admin or owner can create user', function () {
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->create($user));
+    expect((new UserPolicy)->create($user))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new UserPolicy)->create($user));
-    }
+    expect((new UserPolicy)->create($user))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_create_user()
-    {
-        $user = User::factory()->create();
+test('not admin or owner cant create user', function () {
+    $user = User::factory()->create();
 
-        $this->assertFalse((new UserPolicy)->create($user));
-    }
+    expect((new UserPolicy)->create($user))->toBeFalse();
+});
 
-    /** @test */
-    public function owner_can_delete_user()
-    {
-        $userToDelete = User::factory()->create();
+test('owner can delete user', function () {
+    $userToDelete = User::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->delete($user, $userToDelete));
-    }
+    expect((new UserPolicy)->delete($user, $userToDelete))->toBeTrue();
+});
 
-    /** @test */
-    public function owner_cant_delete_themselves()
-    {
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+test('owner cant delete themselves', function () {
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertFalse((new UserPolicy)->delete($user, $user));
-    }
+    expect((new UserPolicy)->delete($user, $user))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_delete_user_if_not_admin_or_owner()
-    {
-        $userToDelete = User::factory()->create();
+test('admin or owner can delete user if not admin or owner', function () {
+    $userToDelete = User::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->delete($user, $userToDelete));
+    expect((new UserPolicy)->delete($user, $userToDelete))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new UserPolicy)->delete($user, $userToDelete));
-    }
+    expect((new UserPolicy)->delete($user, $userToDelete))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_delete_users()
-    {
-        $userToDelete = User::factory()->create();
+test('not admin or owner cant delete users', function () {
+    $userToDelete = User::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new UserPolicy)->delete($user, $userToDelete));
-    }
+    expect((new UserPolicy)->delete($user, $userToDelete))->toBeFalse();
+});
 
-    /** @test */
-    public function owner_can_update_user()
-    {
-        $userToUpdate = User::factory()->create();
+test('owner can update user', function () {
+    $userToUpdate = User::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->update($user, $userToUpdate));
-    }
+    expect((new UserPolicy)->update($user, $userToUpdate))->toBeTrue();
+});
 
-    /** @test */
-    public function admin_or_owner_can_update_user_if_not_admin_or_owner()
-    {
-        $userToUpdate = User::factory()->create();
+test('admin or owner can update user if not admin or owner', function () {
+    $userToUpdate = User::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->update($user, $userToUpdate));
+    expect((new UserPolicy)->update($user, $userToUpdate))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new UserPolicy)->update($user, $userToUpdate));
-    }
+    expect((new UserPolicy)->update($user, $userToUpdate))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_update_users()
-    {
-        $userToUpdate = User::factory()->create();
+test('not admin or owner cant update users', function () {
+    $userToUpdate = User::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new UserPolicy)->update($user, $userToUpdate));
-    }
+    expect((new UserPolicy)->update($user, $userToUpdate))->toBeFalse();
+});
 
-    /** @test */
-    public function owner_can_update_user_role()
-    {
-        $userToUpdate = User::factory()->create();
+test('owner can update user role', function () {
+    $userToUpdate = User::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->updateRole($user, $userToUpdate));
-    }
+    expect((new UserPolicy)->updateRole($user, $userToUpdate))->toBeTrue();
+});
 
-    /** @test */
-    public function owner_cant_update_their_own_role()
-    {
-        $user = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
+test('owner cant update their own role', function () {
+    $user = User::factory()->state([
+        'role' => 'owner',
+    ])->create();
 
-        $this->assertFalse((new UserPolicy)->updateRole($user, $user));
-    }
+    expect((new UserPolicy)->updateRole($user, $user))->toBeFalse();
+});
 
-    /** @test */
-    public function not_owner_cant_update_user_role()
-    {
-        $userToUpdate = User::factory()->create();
+test('not owner cant update user role', function () {
+    $userToUpdate = User::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new UserPolicy)->updateRole($user, $userToUpdate));
+    expect((new UserPolicy)->updateRole($user, $userToUpdate))->toBeFalse();
 
-        $user->role = 'admin';
+    $user->role = 'admin';
 
-        $this->assertFalse((new UserPolicy)->updateRole($user, $userToUpdate));
-    }
+    expect((new UserPolicy)->updateRole($user, $userToUpdate))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_view_user()
-    {
-        $userToView = User::factory()->create();
+test('admin or owner can view user', function () {
+    $userToView = User::factory()->create();
 
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->view($user, $userToView));
+    expect((new UserPolicy)->view($user, $userToView))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new UserPolicy)->view($user, $userToView));
-    }
+    expect((new UserPolicy)->view($user, $userToView))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_view_user()
-    {
-        $userToView = User::factory()->create();
+test('not admin or owner cant view user', function () {
+    $userToView = User::factory()->create();
 
-        $user = User::factory()->create();
+    $user = User::factory()->create();
 
-        $this->assertFalse((new UserPolicy)->view($user, $userToView));
-    }
+    expect((new UserPolicy)->view($user, $userToView))->toBeFalse();
+});
 
-    /** @test */
-    public function admin_or_owner_can_view_any_users()
-    {
-        $user = User::factory()->state([
-            'role' => 'admin',
-        ])->create();
+test('admin or owner can view any users', function () {
+    $user = User::factory()->state([
+        'role' => 'admin',
+    ])->create();
 
-        $this->assertTrue((new UserPolicy)->viewAny($user));
+    expect((new UserPolicy)->viewAny($user))->toBeTrue();
 
-        $user->role = 'owner';
+    $user->role = 'owner';
 
-        $this->assertTrue((new UserPolicy)->viewAny($user));
-    }
+    expect((new UserPolicy)->viewAny($user))->toBeTrue();
+});
 
-    /** @test */
-    public function not_admin_or_owner_cant_view_any_users()
-    {
-        $user = User::factory()->create();
+test('not admin or owner cant view any users', function () {
+    $user = User::factory()->create();
 
-        $this->assertFalse((new UserPolicy)->viewAny($user));
-    }
-}
+    expect((new UserPolicy)->viewAny($user))->toBeFalse();
+});

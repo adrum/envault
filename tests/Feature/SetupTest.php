@@ -1,77 +1,52 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\User;
-use Livewire\Livewire;
-use Tests\TestCase;
 
-class SetupTest extends TestCase
-{
-    /** @test */
-    public function can_setup()
-    {
-        $userToCreate = User::factory()->make();
+test('can setup', function () {
+    $userToCreate = User::factory()->make();
 
-        Livewire::test('setup')
-            ->set('email', $userToCreate->email)
-            ->set('firstName', $userToCreate->first_name)
-            ->set('lastName', $userToCreate->last_name)
-            ->call('setup')
-            ->assertRedirect('/');
+    $this->post(route('setup'), [
+        'email' => $userToCreate->email,
+        'first_name' => $userToCreate->first_name,
+        'last_name' => $userToCreate->last_name,
+        'password' => 'password1234',
+        'password_confirmation' => 'password1234',
+    ])->assertRedirect(route('apps.index'));
 
-        $this->assertDatabaseHas('users', [
-            'email' => $userToCreate->email,
-            'first_name' => $userToCreate->first_name,
-            'last_name' => $userToCreate->last_name,
-            'role' => 'owner',
-        ]);
+    $this->assertDatabaseHas('users', [
+        'email' => $userToCreate->email,
+        'first_name' => $userToCreate->first_name,
+        'last_name' => $userToCreate->last_name,
+        'role' => 'owner',
+    ]);
 
-        $this->assertAuthenticatedAs(User::first());
-    }
+    $this->assertAuthenticatedAs(User::first());
+});
 
-    /** @test */
-    public function cannot_setup_when_users_present()
-    {
-        User::factory()->create();
+test('cannot setup when users present', function () {
+    User::factory()->create();
 
-        $this->assertGreaterThanOrEqual(1, User::count());
+    $this->get(route('setup'))->assertRedirect('/');
+});
 
-        Livewire::test('setup')
-            ->call('setup')
-            ->assertRedirect('/');
-    }
+test('email is email', function () {
+    $this->post(route('setup'), [
+        'email' => 'email',
+        'first_name' => 'First',
+        'last_name' => 'Last',
+        'password' => 'password1234',
+        'password_confirmation' => 'password1234',
+    ])->assertSessionHasErrors('email');
+});
 
-    /** @test */
-    public function email_is_email()
-    {
-        Livewire::test('setup')
-            ->set('email', 'email')
-            ->call('setup')
-            ->assertHasErrors(['email' => 'email']);
-    }
+test('email is required', function () {
+    $this->post(route('setup'))->assertSessionHasErrors('email');
+});
 
-    /** @test */
-    public function email_is_required()
-    {
-        Livewire::test('setup')
-            ->call('setup')
-            ->assertHasErrors(['email' => 'required']);
-    }
+test('first name is required', function () {
+    $this->post(route('setup'))->assertSessionHasErrors('first_name');
+});
 
-    /** @test */
-    public function first_name_is_required()
-    {
-        Livewire::test('setup')
-            ->call('setup')
-            ->assertHasErrors(['firstName' => 'required']);
-    }
-
-    /** @test */
-    public function last_name_is_required()
-    {
-        Livewire::test('setup')
-            ->call('setup')
-            ->assertHasErrors(['lastName' => 'required']);
-    }
-}
+test('last name is required', function () {
+    $this->post(route('setup'))->assertSessionHasErrors('last_name');
+});

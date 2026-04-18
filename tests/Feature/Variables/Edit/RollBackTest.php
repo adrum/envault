@@ -1,49 +1,30 @@
 <?php
 
-namespace Tests\Feature\Variables\Edit;
-
 use App\Models\App;
 use App\Models\User;
 use App\Models\Variable;
-use Livewire\Livewire;
-use Tests\TestCase;
 
-class RollBackTest extends TestCase
-{
-    protected $authenticatedUser;
+beforeEach(function () {
+    $this->authenticatedUser = User::factory()->state(['role' => 'owner'])->create();
+    $this->actingAs($this->authenticatedUser);
+});
 
-    /** @test */
-    public function can_select_version_to_roll_back_to()
-    {
-        $app = App::factory()->create();
+test('can roll back to a previous version', function () {
+    $app = App::factory()->create();
+    $variable = $app->variables()->create(Variable::factory()->make()->toArray());
+    $oldVersion = $variable->versions()->create(['value' => 'old', 'user_id' => $this->authenticatedUser->id]);
+    $variable->versions()->create(['value' => 'new', 'user_id' => $this->authenticatedUser->id]);
 
-        $variableToSelectVersionOf = $app->variables()->create(Variable::factory()->make()->toArray());
+    $this->post(route('variables.rollback', $variable), [
+        'version_id' => $oldVersion->id,
+    ])->assertRedirect();
 
-        Livewire::test('variables.edit.roll-back', ['variable' => $variableToSelectVersionOf])
-            ->set('selectedVersionId', 1)
-            ->call('selectVersion', 2, 'value', 'createdAt')
-            ->assertSet('selectedVersionCreatedAt', 'createdAt')
-            ->assertSet('selectedVersionId', 2)
-            ->assertSet('selectedVersionValue', 'value')
-            ->assertEmitted('variable.version.selected');
+    expect($variable->fresh()->latest_version->value)->toBe('old');
+});
 
-        Livewire::test('variables.edit.roll-back', ['variable' => $variableToSelectVersionOf])
-            ->set('selectedVersionId', 1)
-            ->call('selectVersion', 1, 'value', 'createdAt')
-            ->assertSet('selectedVersionCreatedAt', null)
-            ->assertSet('selectedVersionId', null)
-            ->assertSet('selectedVersionValue', null)
-            ->assertEmitted('variable.version.deselected');
-    }
+test('version_id is required', function () {
+    $app = App::factory()->create();
+    $variable = $app->variables()->create(Variable::factory()->make()->toArray());
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->authenticatedUser = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
-
-        Livewire::actingAs($this->authenticatedUser);
-    }
-}
+    $this->post(route('variables.rollback', $variable))->assertSessionHasErrors('version_id');
+});

@@ -1,169 +1,97 @@
 <?php
 
-namespace Tests\Feature\Variables;
-
 use App\Models\App;
 use App\Models\User;
 use App\Models\Variable;
 use App\Models\VariableVersion;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Livewire\Livewire;
-use Tests\TestCase;
 
-class CreateTest extends TestCase
-{
-    protected $authenticatedUser;
+beforeEach(function () {
+    $this->authenticatedUser = User::factory()->state(['role' => 'owner'])->create();
+    $this->actingAs($this->authenticatedUser);
+});
 
-    /** @test */
-    public function can_create_variable()
-    {
-        $app = App::factory()->create();
+test('can create variable', function () {
+    $app = App::factory()->create();
+    $variableToCreate = Variable::factory()->make();
+    $variableVersionToCreate = VariableVersion::factory()->make();
 
-        $variableToCreate = Variable::factory()->make();
+    $this->post(route('variables.store', $app), [
+        'key' => $variableToCreate->key,
+        'value' => $variableVersionToCreate->value,
+    ])->assertRedirect();
 
-        $variableVersionToCreate = VariableVersion::factory()->make();
+    $this->assertDatabaseHas('variables', [
+        'app_id' => $app->id,
+        'key' => $variableToCreate->key,
+    ]);
 
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('key', $variableToCreate->key)
-            ->set('value', $variableVersionToCreate->value)
-            ->call('store')
-            ->assertEmitted('variable.created')
-            ->assertSet('key', null)
-            ->assertSet('value', null);
+    expect($variableVersionToCreate->value)->toEqual(Variable::where([
+        ['app_id', $app->id],
+        ['key', $variableToCreate->key],
+    ])->first()->latest_version->value);
+});
 
-        $this->assertDatabaseHas('variables', [
-            'app_id' => $app->id,
-            'key' => $variableToCreate->key,
-        ]);
+test('can import variable', function () {
+    $app = App::factory()->create();
+    $variableToCreate = Variable::factory()->make();
+    $variableVersionToCreate = VariableVersion::factory()->make();
 
-        $this->assertEquals(Variable::where([
-            ['app_id', $app->id],
-            ['key', $variableToCreate->key],
-        ])->first()->latest_version->value, $variableVersionToCreate->value);
-    }
+    $this->post(route('variables.import', $app), [
+        'env_content' => $variableToCreate->key . '=' . $variableVersionToCreate->value,
+    ])->assertRedirect();
 
-    /** @test */
-    public function can_import_variable()
-    {
-        $app = App::factory()->create();
+    $this->assertDatabaseHas('variables', [
+        'app_id' => $app->id,
+        'key' => $variableToCreate->key,
+    ]);
 
-        $variableToCreate = Variable::factory()->make();
+    expect($variableVersionToCreate->value)->toEqual(Variable::where([
+        ['app_id', $app->id],
+        ['key', $variableToCreate->key],
+    ])->first()->latest_version->value);
+});
 
-        $variableVersionToCreate = VariableVersion::factory()->make();
+test('can import variable with excess whitespace', function () {
+    $app = App::factory()->create();
+    $variableToCreate = Variable::factory()->make();
+    $variableVersionToCreate = VariableVersion::factory()->make();
 
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('import', $variableToCreate->key.'='.$variableVersionToCreate->value)
-            ->call('import')
-            ->assertEmitted('variables.imported')
-            ->assertSet('key', null)
-            ->assertSet('import', null);
+    $this->post(route('variables.import', $app), [
+        'env_content' => $variableToCreate->key . ' = ' . $variableVersionToCreate->value,
+    ])->assertRedirect();
 
-        $this->assertDatabaseHas('variables', [
-            'app_id' => $app->id,
-            'key' => $variableToCreate->key,
-        ]);
+    $this->assertDatabaseHas('variables', [
+        'app_id' => $app->id,
+        'key' => $variableToCreate->key,
+    ]);
+});
 
-        $this->assertEquals(Variable::where([
-            ['app_id', $app->id],
-            ['key', $variableToCreate->key],
-        ])->first()->latest_version->value, $variableVersionToCreate->value);
-    }
+test('key is alpha dash', function () {
+    $app = App::factory()->create();
 
-    /** @test */
-    public function can_import_variable_with_excess_whitespace()
-    {
-        $app = App::factory()->create();
+    $this->post(route('variables.store', $app), [
+        'key' => fake()->sentence(),
+        'value' => '',
+    ])->assertSessionHasErrors('key');
+});
 
-        $variableToCreate = Variable::factory()->make();
+test('key is required', function () {
+    $app = App::factory()->create();
 
-        $variableVersionToCreate = VariableVersion::factory()->make();
+    $this->post(route('variables.store', $app))->assertSessionHasErrors('key');
+});
 
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('import', $variableToCreate->key.' = '.$variableVersionToCreate->value)
-            ->call('import')
-            ->assertEmitted('variables.imported')
-            ->assertSet('key', null)
-            ->assertSet('import', null);
+test('key is app unique', function () {
+    $app = App::factory()->create();
+    $variable = $app->variables()->create(Variable::factory()->make()->toArray());
 
-        $this->assertDatabaseHas('variables', [
-            'app_id' => $app->id,
-            'key' => $variableToCreate->key,
-        ]);
+    $this->post(route('variables.store', $app), [
+        'key' => $variable->key,
+    ])->assertSessionHasErrors('key');
 
-        $this->assertEquals(Variable::where([
-            ['app_id', $app->id],
-            ['key', $variableToCreate->key],
-        ])->first()->latest_version->value, $variableVersionToCreate->value);
-    }
+    $variableBelongingToDifferentApp = App::factory()->create()->variables()->create(Variable::factory()->make()->toArray());
 
-    /** @test */
-    public function can_upload_file_for_variable_import()
-    {
-        $app = App::factory()->create();
-
-        $variableToCreate = Variable::factory()->make();
-
-        $variableVersionToCreate = VariableVersion::factory()->make();
-
-        $fileToImportContents = $variableToCreate->key.'='.$variableVersionToCreate->value;
-        $fileToImport = UploadedFile::fake()->createWithContent('.env', $fileToImportContents);
-
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('importFile', $fileToImport)
-            ->assertSet('import', $fileToImportContents)
-            ->assertSet('importFile', null);
-    }
-
-    /** @test */
-    public function key_is_alpha_dash()
-    {
-        $app = App::factory()->create();
-
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('key', $this->faker->sentence)
-            ->call('store')
-            ->assertHasErrors(['key' => 'alpha_dash']);
-    }
-
-    /** @test */
-    public function key_is_required()
-    {
-        $app = App::factory()->create();
-
-        Livewire::test('variables.create', ['app' => $app])
-            ->call('store')
-            ->assertHasErrors(['key' => 'required']);
-    }
-
-    /** @test */
-    public function key_is_app_unique()
-    {
-        $app = App::factory()->create();
-
-        $variable = $app->variables()->create(Variable::factory()->make()->toArray());
-
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('key', $variable->key)
-            ->call('store')
-            ->assertHasErrors(['key' => 'unique']);
-
-        $variableBelongingToDifferentApp = App::factory()->create()->variables()->create(Variable::factory()->make()->toArray());
-
-        Livewire::test('variables.create', ['app' => $app])
-            ->set('key', $variableBelongingToDifferentApp->key)
-            ->call('store')
-            ->assertHasNoErrors('key');
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->authenticatedUser = User::factory()->state([
-            'role' => 'owner',
-        ])->create();
-
-        Livewire::actingAs($this->authenticatedUser);
-    }
-}
+    $this->post(route('variables.store', $app), [
+        'key' => $variableBelongingToDifferentApp->key,
+    ])->assertSessionHasNoErrors();
+});

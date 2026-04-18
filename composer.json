@@ -44,7 +44,6 @@
         "pestphp/pest-plugin-laravel": "^4.1"
     },
     "config": {
-        "audit": { "ignore": { "PKSA-5jz8-6tcw-pbk4": "Waiting for pest >4.6.1" } },
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,

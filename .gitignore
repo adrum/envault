@@ -27,6 +27,10 @@ yarn-error.log
 /.nova
 /.vscode/launch.json
 
+.vscode
+.zed
+_ide*
+
 # Local only files
 *.local*
 

@@ -26,7 +26,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        if ($this->app->environment('local')) {
+            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            $this->app->register(TelescopeServiceProvider::class);
+        }
     }
 
     /**
@@ -34,7 +37,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Schema::defaultStringLength(191);
         $this->configureDefaults();
         $this->configureSecureUrls();
         $this->configureMorphMap();
@@ -44,6 +46,17 @@ class AppServiceProvider extends ServiceProvider
         Date::setToStringFormat(DATE_ATOM);
 
         Model::preventLazyLoading(!$this->app->environment('production'));
+
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
+            $event->extendSocialite('laravelpassport', \SocialiteProviders\LaravelPassport\Provider::class);
+        });
+
+        // https://blog.danstorm.dev/blog/managing-laravel-queues-efficiently-with-redis-frankenphp-and-docker/
+        if (file_exists('/usr/local/bin/frankenphp')) {
+            \Laravel\Horizon\SupervisorCommandString::$command = 'exec /usr/local/bin/frankenphp php-cli artisan horizon:supervisor';
+            \Laravel\Horizon\WorkerCommandString::$command = 'exec /usr/local/bin/frankenphp php-cli artisan horizon:work';
+        }
+    }
 
     protected function configureSecureUrls()
     {
@@ -58,6 +71,10 @@ class AppServiceProvider extends ServiceProvider
 
             // Ensure proper server variable is set
             $this->app['request']->server->set('HTTPS', 'on');
+            // Set up global middleware for security headers
+            config('secure-headers.hsts.enable', true);
+            config('secure-headers.csp.upgrade-insecure-requests', true);
+        }
     }
 
     /**

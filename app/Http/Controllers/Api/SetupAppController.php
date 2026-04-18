@@ -2,30 +2,43 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\App;
+use App\Models\AppSetupToken;
+use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Controller;
 
 class SetupAppController extends Controller
 {
-    /**
-     * @param \App\Models\App $app
-     * @param string $token
-     * @return array
-     */
-    public function __invoke(App $app, $token)
+    public function __invoke(App $app, string $token): JsonResponse
     {
-        $setupToken = $app->setup_tokens()->where([
-            ['created_at', '>=', now()->subMinutes(10)],
-            ['token', $token],
-        ])->firstOrFail();
+        $setupToken = AppSetupToken::where('app_id', $app->id)
+            ->where('token', $token)
+            ->where('created_at', '>=', now()->subMinutes(10))
+            ->first();
 
-        if ($setupToken->user->cannot('view', $app)) {
-            abort(403);
+        if (!$setupToken) {
+            return response()->json([
+                'error' => 'Invalid or expired setup token.',
+            ], 401);
         }
 
-        return [
-            'authToken' => $setupToken->user->createToken(uniqid())->plainTextToken,
-            'app' => $setupToken->app->load('variables'),
-        ];
+        $user = $setupToken->user;
+
+        if ($user->cannot('view', $app)) {
+            return response()->json([
+                'error' => 'Unauthorized.',
+            ], 403);
+        }
+
+        $authToken = $user->createToken(uniqid())->plainTextToken;
+
+        $setupToken->delete();
+
+        $app->load('variables');
+
+        return response()->json([
+            'authToken' => $authToken,
+            'app' => $app,
+        ]);
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+#[ObservedBy([UserObserver::class])]
 class User extends Authenticatable
 {
     use HasApiTokens;
@@ -19,21 +20,16 @@ class User extends Authenticatable
     /**
      * The attributes that aren't mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $guarded = [];
 
     /**
-     * The "booting" method of the model.
-     *
-     * @return void
+     * @var list<string>
      */
-    protected static function boot()
-    {
-        parent::boot();
-        
-        static::observe(UserObserver::class);
-    }
+    protected $hidden = [
+        'password',
+    ];
 
     /**
      * @return string

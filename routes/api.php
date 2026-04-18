@@ -1,24 +1,12 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\SetupAppController;
+use App\Http\Controllers\Api\UpdateAppController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
-
-Route::get('version', function () {
-    return '1';
-});
+Route::get('version', fn () => response()->json(['version' => config('app.version', '2.0.0')]));
 
 Route::prefix('v1')->group(function () {
-    Route::post('apps/{app}/setup/{token}', 'SetupAppController')->name('apps.setup');
-    Route::post('apps/{app}/update', 'UpdateAppController')->middleware('auth:sanctum')->name('apps.update');
+    Route::post('apps/{app}/setup/{token}', SetupAppController::class);
+    Route::post('apps/{app}/update', UpdateAppController::class)->middleware('auth:sanctum');
 });

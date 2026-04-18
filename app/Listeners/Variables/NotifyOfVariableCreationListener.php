@@ -10,13 +10,12 @@ class NotifyOfVariableCreationListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Variables\CreatedEvent $event
      * @return void
      */
     public function handle(CreatedEvent $event)
     {
         if ($event->app->notificationsEnabled()) {
-            $event->app->notify(new VariableCreatedNotification($event->variable));
+            $event->app->notify(new VariableCreatedNotification($event->variable, $event->user));
         }
     }
 }

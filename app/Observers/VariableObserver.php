@@ -9,7 +9,6 @@ class VariableObserver
     /**
      * Handle the variable "deleted" event.
      *
-     * @param \App\Models\Variable $variable
      * @return void
      */
     public function deleted(Variable $variable)
@@ -20,11 +19,10 @@ class VariableObserver
     /**
      * Handle the variable "restored" event.
      *
-     * @param \App\Models\Variable $variable
      * @return void
      */
     public function restored(Variable $variable)
     {
-        $variable->versions()->withTrashed()->where('deleted_at', '>=', $variable->deleted_at)->get()->restore();
+        $variable->versions()->withTrashed()->where('deleted_at', '>=', $variable->deleted_at)->restore();
     }
 }

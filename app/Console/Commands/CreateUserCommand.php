@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
 
 class CreateUserCommand extends Command
 {
@@ -45,7 +45,7 @@ class CreateUserCommand extends Command
         $lastName = $this->getLastName();
         $role = $this->getRole();
 
-        if (! $email || ! $firstName || ! $lastName) {
+        if (!$email || !$firstName || !$lastName) {
             return;
         }
 
@@ -68,7 +68,7 @@ class CreateUserCommand extends Command
      */
     protected function getEmail()
     {
-        $email = $this->option('no-interaction') ? env('USER_EMAIL') : $this->ask('Email address');
+        $email = $this->option('no-interaction') ? config('envault.bootstrap_user.email') : $this->ask('Email address');
 
         $validator = Validator::make([
             'email' => $email,
@@ -96,7 +96,7 @@ class CreateUserCommand extends Command
      */
     protected function getFirstName()
     {
-        $firstName = $this->option('no-interaction') ? env('USER_FIRST_NAME') : $this->ask('First name');
+        $firstName = $this->option('no-interaction') ? config('envault.bootstrap_user.first_name') : $this->ask('First name');
 
         $validator = Validator::make([
             'first_name' => $firstName,
@@ -124,7 +124,7 @@ class CreateUserCommand extends Command
      */
     protected function getLastName()
     {
-        $lastName = $this->option('no-interaction') ? env('USER_LAST_NAME') : $this->ask('Last name');
+        $lastName = $this->option('no-interaction') ? config('envault.bootstrap_user.last_name') : $this->ask('Last name');
 
         $validator = Validator::make([
             'last_name' => $lastName,
@@ -160,7 +160,7 @@ class CreateUserCommand extends Command
             return 'owner';
         }
 
-        $type = $this->option('no-interaction') ? ucfirst(env('USER_ROLE', 'user')) : $this->choice('Role', ['User', 'Admin', 'Owner'], 0);
+        $type = $this->option('no-interaction') ? ucfirst(config('envault.bootstrap_user.role')) : $this->choice('Role', ['User', 'Admin', 'Owner'], 0);
 
         if ($type != 'User') {
             return strtolower($type);

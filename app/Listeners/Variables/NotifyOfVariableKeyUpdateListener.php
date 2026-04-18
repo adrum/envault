@@ -10,13 +10,12 @@ class NotifyOfVariableKeyUpdateListener
     /**
      * Handle the event.
      *
-     * @param \App\Events\Variables\KeyUpdatedEvent $event
      * @return void
      */
     public function handle(KeyUpdatedEvent $event)
     {
         if ($event->app->notificationsEnabled()) {
-            $event->app->notify(new VariableUpdatedNotification($event->variable));
+            $event->app->notify(new VariableUpdatedNotification($event->variable, $event->user, 'key'));
         }
     }
 }

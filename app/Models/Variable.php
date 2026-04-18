@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy([VariableObserver::class])]
 class Variable extends Model
 {
     use HasFactory;
@@ -15,26 +16,14 @@ class Variable extends Model
     /**
      * The accessors to append to the model's array form.
      *
-     * @var array
+     * @var list<string>
      */
     protected $appends = ['latest_version'];
 
     /**
-     * The "booting" method of the model.
-     *
-     * @return void
-     */
-    protected static function boot()
-    {
-        parent::boot();
-        
-        static::observe(VariableObserver::class);
-    }
-
-    /**
      * The attributes that aren't mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $guarded = ['latest_version'];
 

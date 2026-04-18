@@ -9,7 +9,6 @@ class AppObserver
     /**
      * Handle the app "deleted" event.
      *
-     * @param \App\Models\App $app
      * @return void
      */
     public function deleted(App $app)
@@ -22,18 +21,16 @@ class AppObserver
     /**
      * Handle the app "restored" event.
      *
-     * @param \App\Models\App $app
      * @return void
      */
     public function restored(App $app)
     {
-        $app->variables()->withTrashed()->where('deleted_at', '>=', $app->deleted_at)->get()->restore();
+        $app->variables()->withTrashed()->where('deleted_at', '>=', $app->deleted_at)->restore();
     }
 
     /**
      * Handle the app "force deleted" event.
      *
-     * @param \App\Models\App $app
      * @return void
      */
     public function forceDeleted(App $app)

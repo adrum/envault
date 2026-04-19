@@ -4,8 +4,11 @@
 FROM composer:2 AS vendor
 WORKDIR /app
 
+ENV COMPOSER_CACHE_DIR=/tmp/composer-cache
+
 COPY composer.json composer.lock ./
-RUN composer install \
+RUN --mount=type=cache,target=/tmp/composer-cache \
+    composer install \
     --no-dev \
     --no-interaction \
     --no-progress \
@@ -75,18 +78,35 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-COPY --from=vendor /app/vendor ./vendor
-COPY --from=frontend /app/public/build ./public/build
-COPY . .
+RUN cat > /usr/local/bin/docker-entrypoint <<'EOF'
+#!/bin/sh
+set -e
 
-RUN cp .env.example .env \
-    && php artisan key:generate --force \
-    && php artisan storage:link \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwX storage bootstrap/cache
+cd /app
+
+mkdir -p \
+    /app/storage/app/public \
+    /app/storage/framework/cache/data \
+    /app/storage/framework/sessions \
+    /app/storage/framework/views \
+    /app/storage/logs \
+    /app/bootstrap/cache
+
+chown -R www-data:www-data /app/storage /app/bootstrap/cache
+chmod -R 775 /app/storage /app/bootstrap/cache
+
+if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    php artisan migrate --force
+fi
+
+php artisan storage:link --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+exec "$@"
+EOF
+RUN chmod +x /usr/local/bin/docker-entrypoint
 
 RUN mkdir -p /etc/supervisor/conf.d && cat > /etc/supervisor/conf.d/app.conf <<'EOF'
 [supervisord]
@@ -130,9 +150,17 @@ stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
 EOF
 
+COPY --from=vendor /app/vendor ./vendor
+COPY --from=frontend /app/public/build ./public/build
+COPY . .
+
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R ug+rwX storage bootstrap/cache
+
 EXPOSE 80 443 443/udp
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
     CMD wget -qO- http://localhost/up || exit 1
 
+ENTRYPOINT ["docker-entrypoint"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/app.conf", "-n"]

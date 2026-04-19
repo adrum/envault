@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Models\AuthRequest;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Laravel\Fortify\Features;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -22,11 +23,13 @@ class EmailCodeController extends Controller
             return Inertia::render('auth/email-code', [
                 'step' => 'code',
                 'email' => $email,
+                'passwordAuthEnabled' => Features::canUpdatePasswords(),
             ]);
         }
 
         return Inertia::render('auth/email-code', [
             'step' => 'email',
+            'passwordAuthEnabled' => Features::canUpdatePasswords(),
         ]);
     }
 

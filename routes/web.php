@@ -1,5 +1,6 @@
 <?php
 
+use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AppController;
 use App\Http\Controllers\LogController;
@@ -17,16 +18,17 @@ Route::middleware(RedirectIfSetup::class)->group(function () {
 
 // Email code auth (passwordless)
 Route::middleware('guest')->group(function () {
+    // Email Logins
     Route::get('auth/email-code', [App\Http\Controllers\Auth\EmailCodeController::class, 'create'])->name('auth.email-code');
     Route::post('auth/email-code/request', [App\Http\Controllers\Auth\EmailCodeController::class, 'requestCode'])->name('auth.email-code.request');
     Route::post('auth/email-code/verify', [App\Http\Controllers\Auth\EmailCodeController::class, 'verifyCode'])->name('auth.email-code.verify');
 
     // Password login (secondary)
-    // Route::get('login/password', fn () => Inertia\Inertia::render('auth/login', [
-    //     'canResetPassword' => Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::resetPasswords()),
-    //     'canRegister' => Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::registration()),
-    //     'status' => request()->session()->get('status'),
-    // ]))->name('login.password');
+    Route::get('login/password', fn () => Features::canUpdatePasswords() ? inertia('auth/login', [
+        'canResetPassword' => Features::enabled(Features::resetPasswords()),
+        'canRegister' => Features::enabled(Features::registration()),
+        'status' => request()->session()->get('status'),
+    ]) : redirect()->route('login'))->name('login.password');
 });
 
 Route::middleware(RedirectIfNotSetup::class)->group(function () {

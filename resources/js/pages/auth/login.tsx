@@ -27,7 +27,7 @@ export default function Login({
       >
         {({ processing, errors }) => (
           <>
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               <div className="grid gap-2">
                 <TextInput
                   id="email"

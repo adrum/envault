@@ -1,3 +1,4 @@
+import TextLink from "@/components/text-link";
 import { Form, Head, router, usePage } from "@inertiajs/react";
 import { Button, Text, TextInput } from "@mantine/core";
 import { SSOLinks } from "./sso-links";
@@ -7,7 +8,11 @@ interface EmailCodeProps {
   email?: string;
 }
 
-export default function EmailCode({ step, email }: EmailCodeProps) {
+export default function EmailCode({
+  step,
+  email,
+  passwordAuthEnabled,
+}: EmailCodeProps) {
   const { errors: pageErrors } = usePage().props;
 
   return (
@@ -49,12 +54,14 @@ export default function EmailCode({ step, email }: EmailCodeProps) {
                   </Button>
                 </div>
 
-                {/* <div className="text-center text-sm text-muted-foreground">
-                  Or{" "}
-                  <TextLink href="/login/password">
-                    log in with password
-                  </TextLink>
-                </div> */}
+                {passwordAuthEnabled && (
+                  <div className="text-center text-sm text-muted-foreground">
+                    Or{" "}
+                    <TextLink href="/login/password">
+                      log in with password
+                    </TextLink>
+                  </div>
+                )}
               </>
             )}
           </Form>

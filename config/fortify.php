@@ -143,16 +143,16 @@ return [
     |
     */
 
-    'features' => [
+    'features' => array_filter([
         // Features::registration(),
-        // Features::resetPasswords(),
-        // Features::updatePasswords(), // Enable to turn on password authentication
+        ...(env('PASSWORD_AUTH_ENABLED', false) ?
+        [Features::updatePasswords(), Features::resetPasswords()] : []),
         Features::emailVerification(),
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
             // 'window' => 0
         ]),
-    ],
+    ]),
 
 ];

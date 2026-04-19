@@ -62,9 +62,7 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/email-code', [
-            'step' => 'email',
-        ]));
+        Fortify::loginView(fn (Request $request) => redirect()->route('auth.email-code'));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->email,

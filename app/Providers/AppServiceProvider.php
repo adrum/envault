@@ -50,12 +50,6 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
             $event->extendSocialite('laravelpassport', \SocialiteProviders\LaravelPassport\Provider::class);
         });
-
-        // https://blog.danstorm.dev/blog/managing-laravel-queues-efficiently-with-redis-frankenphp-and-docker/
-        if (file_exists('/usr/local/bin/frankenphp')) {
-            \Laravel\Horizon\SupervisorCommandString::$command = 'exec /usr/local/bin/frankenphp php-cli artisan horizon:supervisor';
-            \Laravel\Horizon\WorkerCommandString::$command = 'exec /usr/local/bin/frankenphp php-cli artisan horizon:work';
-        }
     }
 
     protected function configureSecureUrls()

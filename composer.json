@@ -14,7 +14,6 @@
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/fortify": "^1.34",
         "laravel/framework": "^13.0",
-        "laravel/horizon": "^5.33",
         "laravel/sanctum": "^4.3",
         "laravel/slack-notification-channel": "^3.8",
         "laravel/tinker": "^3.0.0",

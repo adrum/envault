@@ -20,6 +20,7 @@ import {
   Select,
   Text,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useEffect, useState } from "react";
@@ -298,16 +299,24 @@ export default function AppEdit({
           </div>
           <div className="border-t border-gray-200 px-4 py-5 sm:px-6 dark:border-gray-700">
             <div className="flex items-center gap-4">
-              <label className="w-20 shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="flex w-20 shrink-0 items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Slug
+                <Tooltip
+                  label="Used in the API (e.g. /v1/secret/data/<slug>/<env>). Leave blank to auto-generate from the app name."
+                  withArrow
+                  multiline
+                  w={280}
+                >
+                  <span className="text-gray-400">
+                    <FontAwesomeIcon icon={faInfoCircle} size="xs" />
+                  </span>
+                </Tooltip>
               </label>
               <TextInput
                 value={slug}
                 onChange={(e) => setSlug(e.currentTarget.value)}
                 className="flex-1"
-                description="Used in the Vault path (e.g. /v1/secret/data/<slug>/<env>)."
                 error={pageErrors?.slug}
-                required
               />
             </div>
           </div>
@@ -506,7 +515,21 @@ export default function AppEdit({
             />
           )}
           <TextInput
-            label="Slug"
+            label={
+              <span className="inline-flex items-center gap-1">
+                Slug
+                <Tooltip
+                  label="Used in the API (e.g. /v1/secret/data/<app>/<slug>). Leave blank to auto-derive from the custom label or environment type."
+                  withArrow
+                  multiline
+                  w={280}
+                >
+                  <span className="text-gray-400">
+                    <FontAwesomeIcon icon={faInfoCircle} size="xs" />
+                  </span>
+                </Tooltip>
+              </span>
+            }
             value={editEnvSlug}
             onChange={(e) => setEditEnvSlug(e.currentTarget.value)}
             error={(pageErrors as any).slug}

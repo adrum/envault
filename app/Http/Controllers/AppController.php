@@ -138,7 +138,7 @@ class AppController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => [
                 'sometimes',
-                'required',
+                'nullable',
                 'string',
                 'alpha_dash',
                 'max:255',
@@ -148,6 +148,22 @@ class AppController extends Controller
 
         $oldName = $app->name;
         $oldSlug = $app->slug;
+
+        if (array_key_exists('slug', $validated)) {
+            $desired = trim((string) $validated['slug']);
+
+            if ($desired === '') {
+                $base = \Illuminate\Support\Str::slug($validated['name'] ?? $app->name) ?: 'app';
+                $desired = $base;
+                $counter = 2;
+                while (App::withTrashed()->where('id', '!=', $app->id)->where('slug', $desired)->exists()) {
+                    $desired = $base . '-' . $counter++;
+                }
+            }
+
+            $validated['slug'] = $desired;
+        }
+
         $app->update($validated);
 
         if ($oldName !== $app->name) {

@@ -363,24 +363,24 @@ export default function AppShow({
     <>
       <Head title={app.name} />
 
-      {/* Vault path (app slug / environment slug) */}
+      {/* API path (app slug / environment slug) */}
       {(() => {
         const envSlug = (currentEnv?.slug ?? "").toLowerCase();
-        const vaultPath = envSlug ? `${app.slug}/${envSlug}` : app.slug;
+        const apiPath = envSlug ? `${app.slug}/${envSlug}` : app.slug;
         return (
           <Group gap="xs" mb="md">
             <Text size="sm" c="white">
-              Vault path:
+              API path:
             </Text>
-            <Code>{vaultPath}</Code>
-            <CopyButton value={vaultPath}>
+            <Code>{apiPath}</Code>
+            <CopyButton value={apiPath}>
               {({ copied, copy }) => (
                 <ActionIcon
                   variant="subtle"
                   color={copied ? "green" : "white"}
                   size="sm"
                   onClick={copy}
-                  aria-label="Copy Vault path"
+                  aria-label="Copy API path"
                 >
                   <FontAwesomeIcon
                     icon={copied ? faCheck : faClipboard}

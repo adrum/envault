@@ -100,7 +100,7 @@ export default function Tokens({ tokens }: { tokens: TokenData[] }) {
         <Heading
           variant="small"
           title="API Tokens"
-          description="Manage personal access tokens for the Vault API and integrations"
+          description="Manage personal access tokens for the API and integrations"
         />
 
         {/* Newly created token (shown once) */}

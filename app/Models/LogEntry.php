@@ -21,11 +21,13 @@ class LogEntry extends Model
      */
     protected $guarded = [];
 
+    /** @return MorphTo<Model, $this> */
     public function loggable(): MorphTo
     {
         return $this->morphTo('loggable');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

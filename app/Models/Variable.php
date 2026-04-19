@@ -34,7 +34,7 @@ class Variable extends Model
     /** @return Attribute<VariableVersion|null, never> */
     protected function latestVersion(): Attribute
     {
-        return Attribute::get(fn (): ?VariableVersion => $this->versions()->latest()->first());
+        return Attribute::make(get: fn (): ?VariableVersion => $this->versions()->latest()->first());
     }
 
     /**

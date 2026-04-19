@@ -10,9 +10,7 @@ parameters:
     level: 5
 
     ignoreErrors:
-        -
-            identifier: return.type
-            path: app/Models/Variable.php
+        #- '#PHPDoc tag @var#'
 
     excludePaths:
         - ./*/*/FileToBeExcluded.php

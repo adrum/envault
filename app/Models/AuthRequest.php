@@ -17,6 +17,7 @@ class AuthRequest extends Model
      */
     protected $hidden = ['token'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

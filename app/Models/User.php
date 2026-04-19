@@ -99,11 +99,13 @@ class User extends Authenticatable
         return $this->app_collaborations()->wherePivot('app_id', $app->id)->exists();
     }
 
+    /** @return HasMany<LogEntry, $this> */
     public function actions(): HasMany
     {
         return $this->hasMany(LogEntry::class);
     }
 
+    /** @return BelongsToMany<App, $this> */
     public function app_collaborations(): BelongsToMany
     {
         return $this->belongsToMany(App::class, 'app_collaborators')
@@ -111,11 +113,13 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /** @return HasMany<AppSetupToken, $this> */
     public function app_setup_tokens(): HasMany
     {
         return $this->hasMany(AppSetupToken::class);
     }
 
+    /** @return MorphMany<LogEntry, $this> */
     public function log(): MorphMany
     {
         return $this->morphMany(LogEntry::class, 'loggable');

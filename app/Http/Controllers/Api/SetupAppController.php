@@ -22,6 +22,7 @@ class SetupAppController extends Controller
             ], 401);
         }
 
+        /** @var \App\Models\User $user */
         $user = $setupToken->user;
 
         if ($user->cannot('view', $app)) {

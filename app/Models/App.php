@@ -37,6 +37,7 @@ class App extends Model
         return $this->slack_notification_webhook_url;
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function collaborators(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'app_collaborators')
@@ -44,22 +45,19 @@ class App extends Model
             ->withTimestamps();
     }
 
+    /** @return MorphMany<LogEntry, $this> */
     public function log(): MorphMany
     {
         return $this->morphMany(LogEntry::class, 'loggable');
     }
 
-    /**
-     * @return HasMany<AppSetupToken, $this>
-     */
+    /** @return HasMany<AppSetupToken, $this> */
     public function setup_tokens(): HasMany
     {
         return $this->hasMany(AppSetupToken::class);
     }
 
-    /**
-     * @return HasMany<Variable, $this>
-     */
+    /** @return HasMany<Variable, $this> */
     public function variables(): HasMany
     {
         return $this->hasMany(Variable::class)->orderBy('sort_order');

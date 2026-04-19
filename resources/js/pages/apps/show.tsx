@@ -90,6 +90,7 @@ type Environment = {
 type AppData = {
   id: number;
   name: string;
+  slug: string;
   environments: Environment[];
 };
 
@@ -360,6 +361,38 @@ export default function AppShow({
   return (
     <>
       <Head title={app.name} />
+
+      {/* Vault path (app slug / environment) */}
+      {(() => {
+        const envSlug = (
+          currentEnv?.environment_type?.name ?? currentEnv?.label ?? ""
+        ).toLowerCase();
+        const vaultPath = envSlug ? `${app.slug}/${envSlug}` : app.slug;
+        return (
+          <Group gap="xs" mb="md">
+            <Text size="sm" c="white">
+              Vault path:
+            </Text>
+            <Code>{vaultPath}</Code>
+            <CopyButton value={vaultPath}>
+              {({ copied, copy }) => (
+                <ActionIcon
+                  variant="subtle"
+                  color={copied ? "green" : "white"}
+                  size="sm"
+                  onClick={copy}
+                  aria-label="Copy Vault path"
+                >
+                  <FontAwesomeIcon
+                    icon={copied ? faCheck : faClipboard}
+                    className="size-3"
+                  />
+                </ActionIcon>
+              )}
+            </CopyButton>
+          </Group>
+        );
+      })()}
 
       {/* Set up this app */}
       {setupCommand && (

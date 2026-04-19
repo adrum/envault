@@ -29,6 +29,18 @@ class App extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (App $app) {
+            if (empty($app->slug)) {
+                $baseSlug = \Illuminate\Support\Str::slug($app->name);
+                $slug = $baseSlug;
+                $counter = 1;
+                while (static::withTrashed()->where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+                $app->slug = $slug;
+            }
+        });
+
         static::deleting(function (App $app) {
             if ($app->isForceDeleting()) {
                 return;

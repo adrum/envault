@@ -205,6 +205,19 @@ export default function AppFancyLayout({
       </AppShell.Navbar>
 
       <AppShell.Main>
+        {/* Impersonation banner */}
+        {(usePage().props as any).impersonating && (
+          <div className="bg-yellow-500 px-4 py-2 text-center text-sm font-medium text-yellow-950">
+            You are impersonating {auth.user?.name}.{" "}
+            <button
+              onClick={() => router.post("/impersonate-stop")}
+              className="cursor-pointer underline underline-offset-2 hover:no-underline"
+            >
+              Stop impersonating
+            </button>
+          </div>
+        )}
+
         {/* Dark header bleed with page title */}
         <div className="bg-gray-800 pb-56">
           {pageTitle && (

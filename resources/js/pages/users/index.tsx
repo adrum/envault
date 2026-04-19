@@ -2,6 +2,7 @@ import {
   faCheck,
   faChevronLeft,
   faEnvelope,
+  faMask,
   faPencil,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
@@ -305,12 +306,28 @@ export default function UsersIndex({ users }: { users: UserData[] }) {
               <Button variant="outline" onClick={closeModal}>
                 Close
               </Button>
-              <Button
-                leftSection={<FontAwesomeIcon icon={faPencil} />}
-                onClick={switchToEdit}
-              >
-                Edit
-              </Button>
+              <Group gap="xs">
+                {auth.user.role === "owner" &&
+                  selectedUser.id !== auth.user.id && (
+                    <Button
+                      variant="outline"
+                      color="yellow"
+                      leftSection={<FontAwesomeIcon icon={faMask} />}
+                      onClick={() => {
+                        closeModal();
+                        router.post(`/impersonate/${selectedUser.id}`);
+                      }}
+                    >
+                      Impersonate
+                    </Button>
+                  )}
+                <Button
+                  leftSection={<FontAwesomeIcon icon={faPencil} />}
+                  onClick={switchToEdit}
+                >
+                  Edit
+                </Button>
+              </Group>
             </div>
           </>
         )}

@@ -64,6 +64,10 @@ Route::middleware(RedirectIfNotSetup::class)->group(function () {
         Route::patch('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
 
+        // Impersonation
+        Route::post('impersonate/{user}', [App\Http\Controllers\ImpersonateController::class, 'start'])->name('impersonate.start');
+        Route::post('impersonate-stop', [App\Http\Controllers\ImpersonateController::class, 'stop'])->name('impersonate.stop');
+
         // Audit Log
         Route::get('log', LogController::class)->name('log');
     });

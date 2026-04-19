@@ -63,6 +63,7 @@ class HandleInertiaRequests extends Middleware
                     'logo' => config('services.laravelpassport.logo'),
                 ] : false,
             ],
+            'impersonating' => $request->session()->has('impersonator_id'),
         ];
     }
 }

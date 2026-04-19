@@ -1,12 +1,9 @@
+import useHttpClient from "@/hooks/use-http-client";
 import type { InertiaConfig } from "@inertiajs/core";
 import { router } from "@inertiajs/react";
 import { Button, Group, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import axios from "axios";
 import { useEffect, useRef, useState } from "react";
-
-axios.defaults.withCredentials = true;
-axios.defaults.withXSRFToken = true;
 
 const NOTIFICATION_ID = "session-expiration";
 const WARNING_SECONDS = 120;
@@ -42,6 +39,7 @@ export function SessionExpirationNotification() {
   );
   const initiallyAuthenticated = !!initialPageProps.auth?.user;
 
+  const http = useHttpClient();
   const [authenticated, setAuthenticated] = useState(initiallyAuthenticated);
   const [remembered, setRemembered] = useState(
     initialPageProps.session?.remembered ?? false,
@@ -103,7 +101,7 @@ export function SessionExpirationNotification() {
           <Button
             size="xs"
             onClick={() => {
-              axios
+              http
                 .post("/session/extend")
                 .then((res) => {
                   const newExpiry = res.headers["x-session-expiration"];

@@ -58,7 +58,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'features' => [
                 'passwordAuthentication' => Features::enabled(Features::updatePasswords()),
-                'laravelPassportSso' => filled(config('services.laravelpassport.client_id')),
+                'laravelPassportSso' => filled(config('services.laravelpassport.client_id')) ? [
+                    'label' => config('services.laravelpassport.label'),
+                    'logo' => config('services.laravelpassport.logo'),
+                ] : false,
             ],
         ];
     }

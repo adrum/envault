@@ -47,5 +47,7 @@ return [
         'client_secret' => env('LARAVELPASSPORT_CLIENT_SECRET'),
         'redirect' => env('LARAVELPASSPORT_REDIRECT_URI'),
         'host' => env('LARAVELPASSPORT_HOST'),
+        'label' => env('LARAVELPASSPORT_LABEL', 'Sign in with SSO'),
+        'logo' => env('LARAVELPASSPORT_LOGO', '/images/sso.svg'),
     ],
 ];

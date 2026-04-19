@@ -1,15 +1,19 @@
 import { useFormContext, usePage } from "@inertiajs/react";
 
+type LaravelPassportSso = false | { label: string; logo: string | null };
+
 export const SSOLinks = () => {
   const form = useFormContext();
   const remember = form?.getData().remember ?? false;
   const { features } = usePage<{
-    features: { laravelPassportSso: boolean };
+    features: { laravelPassportSso: LaravelPassportSso };
   }>().props;
 
   if (!features.laravelPassportSso) {
     return null;
   }
+
+  const { label, logo } = features.laravelPassportSso;
 
   return (
     <div>
@@ -30,9 +34,16 @@ export const SSOLinks = () => {
           className="flex w-full items-center justify-center gap-3 rounded-md border border-solid border-gray-300 bg-white px-3 py-1.5 text-[#24292F] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#24292F] dark:bg-background"
         >
           <span className="flex h-10 w-full items-center justify-center gap-2">
-            <span className="h-full w-8">{/* LaravelIcon */}</span>
+            {logo && (
+              <img
+                src={logo}
+                alt=""
+                className="h-6 w-6 object-contain"
+                aria-hidden="true"
+              />
+            )}
             <span className="mb-0.5 truncate text-sm leading-tight font-semibold text-foreground">
-              Sign in with Laravel SSO
+              {label}
             </span>
           </span>
         </a>

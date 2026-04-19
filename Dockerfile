@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/tmp/composer-cache \
 FROM dunglas/frankenphp:1-php8.4-alpine AS codegen
 WORKDIR /app
 
-RUN install-php-extensions bcmath intl pcntl pdo_mysql redis sodium zip
+RUN install-php-extensions bcmath intl pcntl pdo_mysql pdo_pgsql redis sodium zip
 
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
@@ -72,6 +72,7 @@ RUN apk add --no-cache \
         opcache \
         pcntl \
         pdo_mysql \
+        pdo_pgsql \
         redis \
         sodium \
         zip

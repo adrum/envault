@@ -214,7 +214,7 @@ export default function LogIndex({
                   return (
                     <Button
                       key={label}
-                      variant="default"
+                      variant="outline"
                       size="xs"
                       disabled={!link.url}
                       onClick={() =>

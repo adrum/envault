@@ -28,6 +28,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
           { title: "Profile", href: edit(), icon: null },
           { title: "Security", href: editSecurity(), icon: null },
           { title: "Appearance", href: editAppearance(), icon: null },
+          { title: "API Tokens", href: "/settings/tokens", icon: null },
         ],
       },
     ];

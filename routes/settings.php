@@ -25,6 +25,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
 
+    Route::get('settings/tokens', [App\Http\Controllers\Settings\ApiTokenController::class, 'index'])->name('tokens.index');
+    Route::post('settings/tokens', [App\Http\Controllers\Settings\ApiTokenController::class, 'store'])->name('tokens.store');
+    Route::patch('settings/tokens/{token}', [App\Http\Controllers\Settings\ApiTokenController::class, 'update'])->name('tokens.update');
+    Route::delete('settings/tokens/{token}', [App\Http\Controllers\Settings\ApiTokenController::class, 'destroy'])->name('tokens.destroy');
+
     Route::get('settings/environments', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'index'])->name('environment-types.index');
     Route::post('settings/environments', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'store'])->name('environment-types.store');
     Route::patch('settings/environments/{environmentType}', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'update'])->name('environment-types.update');

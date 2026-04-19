@@ -2,7 +2,6 @@ import Heading from "@/components/heading";
 import TwoFactorRecoveryCodes from "@/components/two-factor-recovery-codes";
 import TwoFactorSetupModal from "@/components/two-factor-setup-modal";
 import { useTwoFactorAuth } from "@/hooks/use-two-factor-auth";
-import SecurityController from "@/wayfinder/actions/App/Http/Controllers/Settings/SecurityController";
 import { edit } from "@/wayfinder/routes/security";
 import { faShield } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -64,7 +63,8 @@ export default function Security({
           />
 
           <Form
-            {...SecurityController.update.form()}
+            method="put"
+            action="/settings/password"
             options={{
               preserveScroll: true,
             }}

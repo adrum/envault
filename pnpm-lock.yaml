@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@inertiajs/core': ^3.0.3
+
 importers:
 
   .:
@@ -557,14 +560,6 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
-
-  '@inertiajs/core@3.0.0':
-    resolution: {integrity: sha512-LkdXfOXJGLIFQeqirO66lQ401ciO1f7yEiQV7ZWFbt9f2ElgilSkm6aOXLbPwHJF77h27jdtja0OJDS8+l7Svw==}
-    peerDependencies:
-      axios: ^1.13.2
-    peerDependenciesMeta:
-      axios:
-        optional: true
 
   '@inertiajs/core@3.0.3':
     resolution: {integrity: sha512-/4sW/cfNpvujjVOZlB5UNypLGNySs7X7V8IMLNSK8+3j1KsUYGS5wpLd9EqAu8wy8RiW7PPra2rPwB6Lx/ACow==}
@@ -2772,14 +2767,6 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@inertiajs/core@3.0.0(axios@1.13.6)':
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      es-toolkit: 1.45.1
-      laravel-precognition: 2.0.0(axios@1.13.6)
-    optionalDependencies:
-      axios: 1.13.6
-
   '@inertiajs/core@3.0.3(axios@1.13.6)':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -2790,7 +2777,7 @@ snapshots:
 
   '@inertiajs/react@3.0.0(axios@1.13.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
-      '@inertiajs/core': 3.0.0(axios@1.13.6)
+      '@inertiajs/core': 3.0.3(axios@1.13.6)
       es-toolkit: 1.45.1
       laravel-precognition: 2.0.0(axios@1.13.6)
       react: 19.2.4
@@ -2800,7 +2787,7 @@ snapshots:
 
   '@inertiajs/vite@3.0.0(axios@1.13.6)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1))':
     dependencies:
-      '@inertiajs/core': 3.0.0(axios@1.13.6)
+      '@inertiajs/core': 3.0.3(axios@1.13.6)
       vite: 8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)
     transitivePeerDependencies:
       - axios

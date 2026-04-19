@@ -1,6 +1,5 @@
 import AppLogoIcon from "@/components/app-logo-icon";
 import { useMobileNavigation } from "@/hooks/use-mobile-navigation";
-import type { SharedProps } from "@/types/auth";
 import type { BreadcrumbItem } from "@/types/navigation";
 import {
   faBoxesStacked,
@@ -41,11 +40,10 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-        active
-          ? "bg-gray-900 text-white"
-          : "text-gray-300 hover:bg-gray-700 hover:text-white"
-      }`}
+      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${active
+        ? "bg-gray-900 text-white"
+        : "text-gray-300 hover:bg-gray-700 hover:text-white"
+        }`}
     >
       <FontAwesomeIcon icon={item.icon} className="size-4" />
       <span>{item.label}</span>
@@ -64,8 +62,7 @@ export default function AppFancyLayout({
   headerAction?: React.ReactNode;
 }>) {
   const [opened, { toggle, close }] = useDisclosure();
-  const { auth, can } = usePage<{ props: SharedProps }>()
-    .props as unknown as SharedProps;
+  const { auth, can } = usePage().props;
   const cleanup = useMobileNavigation();
   const pathname =
     typeof window !== "undefined" ? window.location.pathname : "";
@@ -74,9 +71,9 @@ export default function AppFancyLayout({
     { label: "Apps", href: "/apps", icon: faBoxesStacked },
     ...(can.administrate
       ? [
-          { label: "Audit Log", href: "/log", icon: faClipboardList },
-          { label: "Users", href: "/users", icon: faUsers },
-        ]
+        { label: "Audit Log", href: "/log", icon: faClipboardList },
+        { label: "Users", href: "/users", icon: faUsers },
+      ]
       : []),
   ];
 
@@ -148,6 +145,9 @@ export default function AppFancyLayout({
                     </Text>
                   </Menu.Label>
                   <Menu.Divider />
+                  <Menu.Item component={"a"} href="/docs">
+                    Documentation
+                  </Menu.Item>
                   <Menu.Item component={Link} href="/settings/profile">
                     My Account
                   </Menu.Item>

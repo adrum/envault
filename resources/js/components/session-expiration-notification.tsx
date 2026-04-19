@@ -202,7 +202,7 @@ export function SessionExpirationNotification() {
       clearTimeout(expiryTimerRef.current);
       clearInterval(countdownRef.current);
     };
-  }, [expiry, authenticated, remembered]);
+  }, [expiry, authenticated, remembered, http]);
 
   return null;
 }

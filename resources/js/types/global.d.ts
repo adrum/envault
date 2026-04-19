@@ -1,3 +1,4 @@
+import "@inertiajs/core";
 import type { Auth } from "@/types/auth";
 import type { Session } from "./session";
 
@@ -8,7 +9,15 @@ declare module "@inertiajs/core" {
       auth: Auth;
       session: Session;
       sidebarOpen: boolean;
-      [key: string]: unknown;
+      can: {
+        administrate: boolean;
+      };
+      flash: {
+        success?: string;
+        error?: string;
+        warning?: string;
+        info?: string;
+      };
     };
   }
 }

@@ -1,7 +1,6 @@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/types";
-import type { SharedProps } from "@/types/auth";
 import {
   faBoxesStacked,
   faClipboardList,
@@ -40,8 +39,7 @@ export function AppSidebar({
   const pathname =
     typeof window !== "undefined" ? window.location.pathname : "";
   const isMobile = useIsMobile();
-  const { can } = usePage<{ props: SharedProps }>()
-    .props as unknown as SharedProps;
+  const { can } = usePage().props;
 
   const mainNavItems: NavItem[] = [
     {
@@ -51,17 +49,17 @@ export function AppSidebar({
     },
     ...(can.administrate
       ? [
-          {
-            title: "Audit Log",
-            href: "/log",
-            icon: faClipboardList,
-          },
-          {
-            title: "Users",
-            href: "/users",
-            icon: faUsers,
-          },
-        ]
+        {
+          title: "Audit Log",
+          href: "/log",
+          icon: faClipboardList,
+        },
+        {
+          title: "Users",
+          href: "/users",
+          icon: faUsers,
+        },
+      ]
       : []),
   ];
 

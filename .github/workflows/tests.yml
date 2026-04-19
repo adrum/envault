@@ -21,7 +21,8 @@ jobs:
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
       - name: Install Composer dependencies
-        run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+        run: composer install --no-ansi --no-interaction --no-scripts --no-progress
+          --prefer-dist
 
       - name: Generate key
         run: php artisan key:generate
@@ -33,6 +34,23 @@ jobs:
         run: |
           mkdir -p database
           touch database/database.sqlite
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend tests (tsc + lint)
+        run: pnpm run test
 
       - name: Execute tests
         env:

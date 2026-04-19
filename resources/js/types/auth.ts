@@ -19,21 +19,6 @@ export type Auth = {
   user: User;
 };
 
-export type SharedProps = {
-  auth: Auth;
-  can: {
-    administrate: boolean;
-  };
-  flash: {
-    success?: string;
-    error?: string;
-    warning?: string;
-    info?: string;
-  };
-  name: string;
-  sidebarOpen: boolean;
-};
-
 export type TwoFactorSetupData = {
   svg: string;
   url: string;

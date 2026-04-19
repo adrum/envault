@@ -67,6 +67,11 @@
         "typescript": "^5.9.3",
         "vite": "^8.0.3"
     },
+    "pnpm": {
+        "overrides": {
+            "@inertiajs/core": "$@inertiajs/core"
+        }
+    },
     "optionalDependencies": {
         "@rolldown/binding-android-arm64": "1.0.0-rc.12",
         "@rolldown/binding-darwin-x64": "1.0.0-rc.12",

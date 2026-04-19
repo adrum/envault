@@ -3,9 +3,30 @@
 namespace App\Observers;
 
 use App\Models\App;
+use App\Models\Environment;
+use App\Models\EnvironmentType;
 
 class AppObserver
 {
+    public function created(App $app): void
+    {
+        $defaultType = EnvironmentType::orderBy('sort_order')->first()
+            ?? EnvironmentType::create([
+                'name' => 'Default',
+                'color' => 'gray',
+                'sort_order' => 0,
+            ]);
+
+        if (!Environment::where('app_id', $app->id)->exists()) {
+            Environment::create([
+                'app_id' => $app->id,
+                'environment_type_id' => $defaultType->id,
+                'label' => $defaultType->name,
+                'color' => $defaultType->color,
+            ]);
+        }
+    }
+
     /**
      * Handle the app "deleted" event.
      *

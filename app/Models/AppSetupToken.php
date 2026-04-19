@@ -31,4 +31,10 @@ class AppSetupToken extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /** @return BelongsTo<Environment, $this> */
+    public function environment(): BelongsTo
+    {
+        return $this->belongsTo(Environment::class);
+    }
 }

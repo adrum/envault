@@ -6,30 +6,43 @@ import { edit as editAppearance } from "@/wayfinder/routes/appearance";
 import { edit } from "@/wayfinder/routes/profile";
 import { edit as editSecurity } from "@/wayfinder/routes/security";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Link } from "@inertiajs/react";
-import { Button } from "@mantine/core";
+import { Link, usePage } from "@inertiajs/react";
+import { Button, Text } from "@mantine/core";
 import type { PropsWithChildren } from "react";
+import { useMemo } from "react";
 
-const sidebarNavItems: NavItem[] = [
-  {
-    title: "Profile",
-    href: edit(),
-    icon: null,
-  },
-  {
-    title: "Security",
-    href: editSecurity(),
-    icon: null,
-  },
-  {
-    title: "Appearance",
-    href: editAppearance(),
-    icon: null,
-  },
-];
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
   const { isCurrentOrParentUrl } = useCurrentUrl();
+  const { can } = usePage().props as any;
+
+  const navSections = useMemo<NavSection[]>(() => {
+    const sections: NavSection[] = [
+      {
+        label: "Personal",
+        items: [
+          { title: "Profile", href: edit(), icon: null },
+          { title: "Security", href: editSecurity(), icon: null },
+          { title: "Appearance", href: editAppearance(), icon: null },
+        ],
+      },
+    ];
+
+    if (can?.administrate) {
+      sections.push({
+        label: "Global",
+        items: [
+          { title: "Environments", href: "/settings/environments", icon: null },
+        ],
+      });
+    }
+
+    return sections;
+  }, [can]);
 
   return (
     <div className="rounded-lg border border-border bg-background px-4 py-6">
@@ -44,31 +57,46 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             className="flex flex-col space-y-1 space-x-0"
             aria-label="Settings"
           >
-            {sidebarNavItems.map((item, index) => (
-              <Button
-                key={`${toUrl(item.href)}-${index}`}
-                href={toUrl(item.href)}
-                component={Link}
-                prefetch
-                size="sm"
-                justify="start"
-                color="gray"
-                variant="subtle"
-                leftSection={
-                  item.icon && (
-                    <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
-                  )
-                }
-                styles={{
-                  root: {
-                    ...(isCurrentOrParentUrl(toUrl(item.href)) && {
-                      backgroundColor: "var(--color-muted)",
-                    }),
-                  },
-                }}
+            {navSections.map((section, sIndex) => (
+              <div
+                key={section.label}
+                className={`flex flex-col space-y-1${sIndex > 0 ? "pt-4" : ""}`}
               >
-                {item.title}
-              </Button>
+                <Text
+                  size="xs"
+                  fw={600}
+                  c="dimmed"
+                  className="mb-1 px-3 tracking-wider uppercase"
+                >
+                  {section.label}
+                </Text>
+                {section.items.map((item, index) => (
+                  <Button
+                    key={`${toUrl(item.href)}-${index}`}
+                    href={toUrl(item.href)}
+                    component={Link}
+                    prefetch
+                    size="sm"
+                    justify="start"
+                    color="gray"
+                    variant="subtle"
+                    leftSection={
+                      item.icon && (
+                        <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+                      )
+                    }
+                    styles={{
+                      root: {
+                        ...(isCurrentOrParentUrl(toUrl(item.href)) && {
+                          backgroundColor: "var(--color-muted)",
+                        }),
+                      },
+                    }}
+                  >
+                    {item.title}
+                  </Button>
+                ))}
+              </div>
             ))}
           </nav>
         </aside>

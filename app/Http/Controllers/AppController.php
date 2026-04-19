@@ -24,11 +24,20 @@ class AppController extends Controller
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $apps = $query->withCount('variables')->paginate(10)->withQueryString();
+        $environmentFilter = $request->get('environment_type');
+        if ($environmentFilter) {
+            $query->whereHas('environments', fn ($q) => $q->where('environment_type_id', $environmentFilter));
+        }
+
+        $apps = $query->with('environments')->withCount('variables')->paginate(10)->withQueryString();
+
+        $environmentTypes = \App\Models\EnvironmentType::orderBy('sort_order')->get(['id', 'name', 'color']);
 
         return Inertia::render('apps/index', [
             'apps' => $apps,
             'search' => $search,
+            'environment_type' => $environmentFilter,
+            'environmentTypes' => $environmentTypes,
         ]);
     }
 
@@ -36,21 +45,30 @@ class AppController extends Controller
     {
         $this->authorize('view', $app);
 
-        $app->load(['variables.versions' => fn ($q) => $q->with('user:id,first_name,last_name')->latest()]);
+        $app->load([
+            'environments.variables.latest_version',
+            'environments.variables.versions' => fn ($q) => $q->with('user:id,first_name,last_name')->latest(),
+        ]);
 
-        $setupToken = null;
-        $plainToken = null;
-        if (request()->user()->isAdminOrOwner() || request()->user()->isAppAdmin($app)) {
-            $plainToken = \Illuminate\Support\Str::random(16);
-            $setupToken = $app->setup_tokens()->create([
-                'token' => $plainToken,
-                'user_id' => request()->user()->id,
-            ]);
+        // Generate setup tokens per environment for admins
+        $setupTokens = [];
+        $canGenerateTokens = request()->user()->isAdminOrOwner() || request()->user()->isAppAdmin($app);
+
+        if ($canGenerateTokens) {
+            foreach ($app->environments as $env) {
+                $plainToken = \Illuminate\Support\Str::random(16);
+                $app->setup_tokens()->create([
+                    'token' => $plainToken,
+                    'environment_id' => $env->id,
+                    'user_id' => request()->user()->id,
+                ]);
+                $setupTokens[$env->id] = $plainToken;
+            }
         }
 
         return Inertia::render('apps/show', [
             'app' => $app,
-            'setupToken' => $setupToken ? ['app_id' => $app->id, 'plain_token' => $plainToken] : null,
+            'setupTokens' => $setupTokens,
             'canManage' => request()->user()->can('update', $app),
             'canCreateVariable' => request()->user()->can('createVariable', $app),
         ]);
@@ -65,6 +83,19 @@ class AppController extends Controller
         ]);
 
         $app = App::create($validated);
+
+        // Create default environment
+        $defaultType = \App\Models\EnvironmentType::query()
+            ->orderBy('sort_order')
+            ->first();
+
+        if ($defaultType) {
+            $app->environments()->create([
+                'environment_type_id' => $defaultType->id,
+                'label' => $defaultType->name,
+                'color' => $defaultType->color,
+            ]);
+        }
 
         LogEntry::create([
             'action' => 'created',
@@ -81,7 +112,8 @@ class AppController extends Controller
     {
         $this->authorize('update', $app);
 
-        $app->load('collaborators');
+        $app->load(['collaborators', 'environments']);
+        $environmentTypes = \App\Models\EnvironmentType::orderBy('sort_order')->get();
 
         // Admin/owner users always appear in the collaborators list
         $adminUsers = \App\Models\User::whereIn('role', ['admin', 'owner'])->get();
@@ -94,6 +126,7 @@ class AppController extends Controller
             'app' => $app,
             'adminUsers' => $adminUsers,
             'availableUsers' => $availableUsers,
+            'environmentTypes' => $environmentTypes,
         ]);
     }
 

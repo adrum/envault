@@ -126,7 +126,7 @@ export default function AppFancyLayout({
             </Group>
 
             <Group gap="sm" wrap="nowrap">
-              <Menu shadow="md" width={200} position="bottom-end">
+              <Menu shadow="md" width={220} position="bottom-end">
                 <Menu.Target>
                   <UnstyledButton
                     className="hidden items-center md:flex"
@@ -134,7 +134,7 @@ export default function AppFancyLayout({
                   >
                     <FontAwesomeIcon
                       icon={faUserCircle}
-                      className="size-8 text-white"
+                      className="text-2xl! text-white"
                     />
                   </UnstyledButton>
                 </Menu.Target>

@@ -24,4 +24,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     }
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+
+    Route::get('settings/environments', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'index'])->name('environment-types.index');
+    Route::post('settings/environments', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'store'])->name('environment-types.store');
+    Route::patch('settings/environments/{environmentType}', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'update'])->name('environment-types.update');
+    Route::post('settings/environments/reorder', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'reorder'])->name('environment-types.reorder');
+    Route::delete('settings/environments/{environmentType}', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'destroy'])->name('environment-types.destroy');
 });

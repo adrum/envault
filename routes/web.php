@@ -50,6 +50,11 @@ Route::middleware(RedirectIfNotSetup::class)->group(function () {
         Route::delete('apps/{app}/collaborators', [AppController::class, 'removeCollaborator'])->name('apps.collaborators.remove');
         Route::patch('apps/{app}/collaborators', [AppController::class, 'updateCollaboratorRole'])->name('apps.collaborators.update-role');
 
+        // Environments
+        Route::post('apps/{app}/environments', [App\Http\Controllers\EnvironmentController::class, 'store'])->name('environments.store');
+        Route::patch('environments/{environment}', [App\Http\Controllers\EnvironmentController::class, 'update'])->name('environments.update');
+        Route::delete('environments/{environment}', [App\Http\Controllers\EnvironmentController::class, 'destroy'])->name('environments.destroy');
+
         // Variables
         Route::post('apps/{app}/variables', [VariableController::class, 'store'])->name('variables.store');
         Route::post('apps/{app}/variables/import', [VariableController::class, 'import'])->name('variables.import');

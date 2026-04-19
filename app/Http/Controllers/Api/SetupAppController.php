@@ -33,9 +33,17 @@ class SetupAppController extends Controller
 
         $authToken = $user->createToken(uniqid())->plainTextToken;
 
-        $setupToken->delete();
+        // If token is tied to an environment, only return that environment's variables
+        if ($setupToken->environment_id) {
+            $app->setRelation(
+                'variables',
+                $setupToken->environment->variables()->get()
+            );
+        } else {
+            $app->load('variables');
+        }
 
-        $app->load('variables');
+        $setupToken->delete();
 
         return response()->json([
             'authToken' => $authToken,

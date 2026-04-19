@@ -1,3 +1,4 @@
+import { AppColor } from "@/colors";
 import { StreamLanguage } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
 import {
@@ -20,6 +21,7 @@ import {
   CopyButton,
   Group,
   Modal,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -70,30 +72,60 @@ type Variable = {
   versions: VariableVersion[];
 };
 
+type EnvironmentType = {
+  id: number;
+  name: string;
+  color: string;
+  per_app_limit: number | null;
+};
+
+type Environment = {
+  id: number;
+  label: string;
+  color: AppColor | undefined;
+  variables: Variable[];
+  environment_type: EnvironmentType | null;
+};
+
 type AppData = {
   id: number;
   name: string;
-  variables: Variable[];
-};
-
-type SetupToken = {
-  plain_token: string;
-  app_id: number;
+  environments: Environment[];
 };
 
 type ModalMode = "view" | "edit" | null;
 
 export default function AppShow({
   app,
-  setupToken,
+  setupTokens,
   canManage,
   canCreateVariable,
 }: {
   app: AppData;
-  setupToken: SetupToken | null;
+  setupTokens: Record<number, string>;
   canManage: boolean;
   canCreateVariable: boolean;
 }) {
+  const initialEnvId = (() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const envParam = params.get("env");
+      if (envParam && app.environments.some((e) => String(e.id) === envParam)) {
+        return envParam;
+      }
+    }
+    return String(app.environments[0]?.id || "");
+  })();
+
+  const [activeEnv, setActiveEnvState] = useState<string>(initialEnvId);
+  const currentEnv = app.environments.find((e) => String(e.id) === activeEnv);
+
+  const setActiveEnv = (envId: string) => {
+    setActiveEnvState(envId);
+    const url = new URL(window.location.href);
+    url.searchParams.set("env", envId);
+    window.history.replaceState({}, "", url.toString());
+  };
   const [importOpened, { open: openImport, close: closeImport }] =
     useDisclosure(false);
 
@@ -122,6 +154,7 @@ export default function AppShow({
   const [bulkOpened, { open: openBulk, close: closeBulk }] =
     useDisclosure(false);
   const [bulkContent, setBulkContent] = useState("");
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   useEffect(() => {
     setLayoutProps({
@@ -141,9 +174,11 @@ export default function AppShow({
     });
   }, [app, canManage]);
 
-  const setupCommand = setupToken
-    ? `npx envault ${window.location.host} ${app.id} ${setupToken.plain_token}`
-    : null;
+  const currentSetupToken = currentEnv ? setupTokens[currentEnv.id] : null;
+  const setupCommand =
+    currentEnv && currentSetupToken
+      ? `npx envault ${window.location.host} ${app.id} ${currentSetupToken}`
+      : null;
 
   // Open view modal
   const openViewModal = (variable: Variable) => {
@@ -179,7 +214,7 @@ export default function AppShow({
     setSaving(true);
     router.post(
       `/apps/${app.id}/variables`,
-      { key: newKey, value: newValue },
+      { key: newKey, value: newValue, environment_id: currentEnv?.id },
       {
         onSuccess: () => {
           setNewKey("");
@@ -196,7 +231,7 @@ export default function AppShow({
     setSaving(true);
     router.post(
       `/apps/${app.id}/variables/import`,
-      { env_content: importContent },
+      { env_content: importContent, environment_id: currentEnv?.id },
       {
         onSuccess: () => {
           closeImport();
@@ -260,7 +295,8 @@ export default function AppShow({
   };
 
   const openBulkEdit = () => {
-    const lines = app.variables.map(
+    const envVariables = currentEnv?.variables ?? [];
+    const lines = envVariables.map(
       (v) => `${v.key}=${v.latest_version?.value ?? ""}`,
     );
 
@@ -282,11 +318,23 @@ export default function AppShow({
     openBulk();
   };
 
-  const handleBulkSave = () => {
+  const isProductionEnv =
+    currentEnv?.environment_type?.name?.toLowerCase() === "production";
+
+  const handleBulkSaveAttempt = () => {
+    if (isProductionEnv) {
+      setBulkConfirmOpen(true);
+      return;
+    }
+    executeBulkSave();
+  };
+
+  const executeBulkSave = () => {
     setSaving(true);
+    setBulkConfirmOpen(false);
     router.post(
       `/apps/${app.id}/variables/import`,
-      { env_content: bulkContent },
+      { env_content: bulkContent, environment_id: currentEnv?.id },
       {
         onSuccess: () => {
           closeBulk();
@@ -345,24 +393,61 @@ export default function AppShow({
         </div>
       )}
 
-      {/* Variables */}
+      {/* Environment Tabs & Variables */}
       <div className="mb-6 overflow-hidden rounded-md bg-background shadow">
         <div className="flex items-center justify-between px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-bold text-gray-900 dark:text-gray-100">
-            Variables
-          </h3>
-          {app.variables.length > 0 && (
-            <Group gap="xs">
-              <Button
-                variant="subtle"
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg leading-6 font-bold text-gray-900 dark:text-gray-100">
+              Variables
+            </h3>
+            {app.environments.length > 1 && (
+              <Select
+                data={app.environments.map((env) => ({
+                  value: String(env.id),
+                  label: env.label,
+                }))}
+                value={activeEnv}
+                onChange={(v) => v && setActiveEnv(v)}
                 size="xs"
-                leftSection={<FontAwesomeIcon icon={faPencil} />}
-                onClick={openBulkEdit}
+                w={160}
+                leftSection={
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{
+                      backgroundColor: `var(--mantine-color-${currentEnv?.color ?? "gray"}-5)`,
+                    }}
+                  />
+                }
+                styles={{
+                  input: {
+                    borderColor: `var(--mantine-color-${currentEnv?.color ?? "gray"}-5)`,
+                    fontWeight: 600,
+                  },
+                }}
+              />
+            )}
+            {app.environments.length === 1 && (
+              <Badge
+                size="sm"
+                variant="light"
+                color={currentEnv?.color ?? "gray"}
               >
-                Bulk Edit
-              </Button>
+                {currentEnv?.label}
+              </Badge>
+            )}
+          </div>
+          <Group gap="xs">
+            <Button
+              variant="subtle"
+              size="xs"
+              leftSection={<FontAwesomeIcon icon={faPencil} />}
+              onClick={openBulkEdit}
+            >
+              Bulk Edit
+            </Button>
+            {(currentEnv?.variables.length ?? 0) > 0 && (
               <CopyButton
-                value={app.variables
+                value={(currentEnv?.variables ?? [])
                   .map((v) => `${v.key}=${v.latest_version?.value ?? ""}`)
                   .join("\n")}
               >
@@ -380,13 +465,13 @@ export default function AppShow({
                   </Button>
                 )}
               </CopyButton>
-            </Group>
-          )}
+            )}
+          </Group>
         </div>
 
-        {app.variables.length > 0 ? (
+        {(currentEnv?.variables.length ?? 0) > 0 ? (
           <ul>
-            {app.variables.map((variable) => (
+            {(currentEnv?.variables ?? []).map((variable) => (
               <li
                 key={variable.id}
                 className="border-t border-gray-200 dark:border-gray-700"
@@ -630,7 +715,7 @@ export default function AppShow({
               Cancel
             </Button>
             <Button
-              onClick={handleBulkSave}
+              onClick={handleBulkSaveAttempt}
               loading={saving}
               disabled={!bulkContent.trim()}
               leftSection={<FontAwesomeIcon icon={faCheck} />}
@@ -639,6 +724,54 @@ export default function AppShow({
             </Button>
           </Group>
         </Stack>
+      </Modal>
+
+      {/* Production Bulk Edit Confirmation */}
+      <Modal
+        opened={bulkConfirmOpen}
+        onClose={() => setBulkConfirmOpen(false)}
+        withCloseButton={false}
+        centered
+      >
+        <div className="flex gap-4 p-2">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-yellow-100">
+            <svg
+              className="size-6 text-yellow-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+              />
+            </svg>
+          </div>
+          <div>
+            <Text size="lg" fw={700}>
+              You're editing Production
+            </Text>
+            <Text size="sm" c="dimmed" mt={4}>
+              You are about to bulk edit variables in the{" "}
+              <strong>{currentEnv?.label}</strong> environment for{" "}
+              <strong>{app.name}</strong>. Are you sure you want to continue?
+            </Text>
+          </div>
+        </div>
+        <Group
+          justify="flex-end"
+          mt="lg"
+          className="border-t border-gray-200 pt-4 dark:border-gray-700"
+        >
+          <Button variant="outline" onClick={() => setBulkConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={executeBulkSave} loading={saving}>
+            Yes, save changes
+          </Button>
+        </Group>
       </Modal>
 
       {/* Import Modal */}

@@ -16,17 +16,23 @@ class VariableController extends Controller
         $validated = $request->validate([
             'key' => ['required', 'string', 'alpha_dash', 'max:255'],
             'value' => ['nullable', 'string'],
+            'environment_id' => ['nullable', 'exists:environments,id'],
         ]);
 
-        // Check key uniqueness within app
-        if ($app->variables()->where('key', $validated['key'])->exists()) {
-            return back()->withErrors(['key' => 'This variable key already exists in this app.']);
+        $validated['environment_id'] = $validated['environment_id']
+            ?? $app->environments()->value('environments.id');
+
+        // Check key uniqueness within environment
+        $environment = \App\Models\Environment::findOrFail($validated['environment_id']);
+        if ($environment->variables()->where('key', $validated['key'])->exists()) {
+            return back()->withErrors(['key' => 'This variable key already exists in this environment.']);
         }
 
         $maxOrder = $app->variables()->max('sort_order') ?? -1;
         /** @var Variable $variable */
         $variable = $app->variables()->create([
             'key' => $validated['key'],
+            'environment_id' => $validated['environment_id'],
             'sort_order' => $maxOrder + 1,
         ]);
         $variable->versions()->create(['value' => $validated['value'] ?? '', 'user_id' => $request->user()->id]);
@@ -52,7 +58,11 @@ class VariableController extends Controller
 
         $validated = $request->validate([
             'env_content' => ['required', 'string'],
+            'environment_id' => ['nullable', 'exists:environments,id'],
         ]);
+
+        $validated['environment_id'] = $validated['environment_id']
+            ?? $app->environments()->value('environments.id');
 
         $lines = explode("\n", $validated['env_content']);
         $imported = 0;
@@ -80,7 +90,10 @@ class VariableController extends Controller
             }
 
             /** @var Variable $variable */
-            $variable = $app->variables()->firstOrCreate(['key' => $key]);
+            $variable = $app->variables()->where('environment_id', $validated['environment_id'])->firstOrCreate(
+                ['key' => $key],
+                ['environment_id' => $validated['environment_id']],
+            );
             $variable->update(['sort_order' => $sortOrder]);
 
             // Only create a new version if the value actually changed
@@ -96,6 +109,7 @@ class VariableController extends Controller
 
         // Any existing variables not in the import keep their relative order after the imported ones
         $app->variables()
+            ->where('environment_id', $validated['environment_id'])
             ->whereNotIn('key', $processedKeys)
             ->orderBy('sort_order')
             ->each(function ($variable) use (&$sortOrder) {
@@ -139,8 +153,8 @@ class VariableController extends Controller
         $app = $variable->app;
 
         if (isset($validated['key']) && $validated['key'] !== $variable->key) {
-            if ($app->variables()->where('key', $validated['key'])->where('id', '!=', $variable->id)->exists()) {
-                return back()->withErrors(['key' => 'This variable key already exists in this app.']);
+            if ($app->variables()->where('environment_id', $variable->environment_id)->where('key', $validated['key'])->where('id', '!=', $variable->id)->exists()) {
+                return back()->withErrors(['key' => 'This variable key already exists in this environment.']);
             }
 
             $oldKey = $variable->key;
@@ -226,9 +240,15 @@ class VariableController extends Controller
     {
         $this->authorize('view', $app);
 
-        $app->load(['variables.versions' => fn ($q) => $q->latest()->limit(1)]);
+        $environmentId = request()->get('environment');
+        if ($environmentId) {
+            $variables = $app->variables()->where('environment_id', $environmentId)->with(['versions' => fn ($q) => $q->latest()->limit(1)])->get();
+        } else {
+            $app->load(['variables.versions' => fn ($q) => $q->latest()->limit(1)]);
+            $variables = $app->variables;
+        }
 
-        $env = $app->variables->map(function (Variable $variable) {
+        $env = $variables->map(function (Variable $variable) {
             $value = $variable->latest_version !== null ? $variable->latest_version->value : '';
 
             return "{$variable->key}={$value}";

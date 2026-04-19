@@ -81,6 +81,26 @@ test('key is required', function () {
     $this->post(route('variables.store', $app))->assertSessionHasErrors('key');
 });
 
+test('same key is allowed across different environments of an app', function () {
+    $app = App::factory()->create();
+    $type = \App\Models\EnvironmentType::create(['name' => 'Staging', 'color' => 'blue', 'sort_order' => 1]);
+    $otherEnv = $app->environments()->create([
+        'environment_type_id' => $type->id,
+        'label' => $type->name,
+        'color' => $type->color,
+    ]);
+
+    $variable = $app->variables()->create(Variable::factory()->make()->toArray());
+
+    $this->post(route('variables.store', $app), [
+        'key' => $variable->key,
+        'environment_id' => $otherEnv->id,
+        'value' => 'other-env-value',
+    ])->assertSessionHasNoErrors();
+
+    expect(Variable::where('app_id', $app->id)->where('key', $variable->key)->count())->toBe(2);
+});
+
 test('key is app unique', function () {
     $app = App::factory()->create();
     $variable = $app->variables()->create(Variable::factory()->make()->toArray());

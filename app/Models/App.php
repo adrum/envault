@@ -27,6 +27,27 @@ class App extends Model
      */
     protected $guarded = [];
 
+    protected static function booted(): void
+    {
+        static::deleting(function (App $app) {
+            if ($app->isForceDeleting()) {
+                return;
+            }
+
+            $app->environments()->each(function ($environment) {
+                $environment->variables()->delete();
+                $environment->delete();
+            });
+        });
+
+        static::restoring(function (App $app) {
+            $app->environments()->withTrashed()->each(function ($environment) {
+                $environment->restore();
+                $environment->variables()->withTrashed()->restore();
+            });
+        });
+    }
+
     public function notificationsEnabled(): bool
     {
         return $this->slack_notification_channel && $this->slack_notification_webhook_url;
@@ -35,6 +56,15 @@ class App extends Model
     public function routeNotificationForSlack(Notification $notification): ?string
     {
         return $this->slack_notification_webhook_url;
+    }
+
+    /** @return HasMany<Environment, $this> */
+    public function environments(): HasMany
+    {
+        return $this->hasMany(Environment::class)
+            ->join('environment_types', 'environments.environment_type_id', '=', 'environment_types.id')
+            ->orderBy('environment_types.sort_order')
+            ->select('environments.*');
     }
 
     /** @return BelongsToMany<User, $this> */

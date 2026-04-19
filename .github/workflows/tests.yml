@@ -49,6 +49,9 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Wayfinder + TypeScript definitions
+        run: composer run type-gen
+
       - name: Run frontend tests (tsc + lint)
         run: pnpm run test
 

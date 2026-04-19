@@ -72,10 +72,12 @@ export default function AppEdit({
   );
   const [deleteOpened, { open: openDelete, close: closeDelete }] =
     useDisclosure(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("collaborator");
 
+  const [deleteConfirmLabel, setDeleteConfirmLabel] = useState("");
   const handleUpdateDetails = (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -90,7 +92,9 @@ export default function AppEdit({
   };
 
   const handleDelete = () => {
-    router.delete(`/apps/${app.id}`);
+    router.delete(`/apps/${app.id}`, {
+      data: { confirm_name: deleteConfirmName },
+    });
   };
 
   const handleUpdateNotifications = (e: React.FormEvent) => {
@@ -434,9 +438,16 @@ export default function AppEdit({
               Delete this app
             </Text>
             <Text size="sm" c="dimmed" mt={4}>
-              Are you sure you want to delete {app.name}? This action is
-              permanent.
+              This will permanently delete all environments and variables. Type{" "}
+              <strong>{app.name}</strong> to confirm.
             </Text>
+            <TextInput
+              mt="sm"
+              placeholder={app.name}
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.currentTarget.value)}
+              error={(pageErrors as any).confirm_name}
+            />
           </div>
         </div>
         <Group
@@ -447,7 +458,11 @@ export default function AppEdit({
           <Button variant="outline" onClick={closeDelete}>
             Cancel
           </Button>
-          <Button color="red" onClick={handleDelete}>
+          <Button
+            color="red"
+            onClick={handleDelete}
+            disabled={deleteConfirmName !== app.name}
+          >
             Confirm
           </Button>
         </Group>

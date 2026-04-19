@@ -121,16 +121,24 @@ class AppController extends Controller
         return back();
     }
 
-    public function destroy(App $app)
+    public function destroy(Request $request, App $app)
     {
         $this->authorize('delete', $app);
+
+        $request->validate([
+            'confirm_name' => ['required', 'string'],
+        ]);
+
+        if ($request->input('confirm_name') !== $app->name) {
+            return back()->withErrors(['confirm_name' => 'The app name does not match.']);
+        }
 
         LogEntry::create([
             'action' => 'deleted',
             'description' => "Deleted app \"{$app->name}\"",
             'loggable_type' => 'app',
             'loggable_id' => $app->id,
-            'user_id' => request()->user()->id,
+            'user_id' => $request->user()->id,
         ]);
 
         $app->delete();

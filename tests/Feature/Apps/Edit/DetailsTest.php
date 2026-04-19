@@ -11,7 +11,9 @@ beforeEach(function () {
 test('can delete app', function () {
     $appToDelete = App::factory()->create();
 
-    $this->delete(route('apps.destroy', $appToDelete))->assertRedirect();
+    $this->delete(route('apps.destroy', $appToDelete), [
+        'confirm_name' => $appToDelete->name,
+    ])->assertRedirect();
 
     $this->assertSoftDeleted('apps', [
         'id' => $appToDelete->id,

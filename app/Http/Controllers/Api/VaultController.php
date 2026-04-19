@@ -86,9 +86,9 @@ class VaultController extends Controller
             return response()->json(['errors' => ['permission denied']], 403);
         }
 
-        // Find the environment by type name (case-insensitive)
+        // Find the environment by slug (case-insensitive)
         $environment = $app->environments()
-            ->whereHas('environmentType', fn ($q) => $q->whereRaw('LOWER(name) = ?', [strtolower($envName)]))
+            ->whereRaw('LOWER(environments.slug) = ?', [strtolower($envName)])
             ->first();
 
         if (!$environment) {
@@ -174,9 +174,8 @@ class VaultController extends Controller
         }
 
         $envNames = $app->environments()
-            ->with('environmentType')
             ->get()
-            ->map(fn ($env) => strtolower($env->environmentType->name ?? $env->label))
+            ->map(fn ($env) => strtolower($env->slug))
             ->unique()
             ->values()
             ->toArray();

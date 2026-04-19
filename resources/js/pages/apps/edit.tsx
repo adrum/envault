@@ -51,6 +51,7 @@ type EnvironmentTypeData = {
 type EnvironmentData = {
   id: number;
   label: string;
+  slug: string;
   color: string;
   sort_order: number;
   environment_type_id: number | null;
@@ -61,6 +62,7 @@ type EnvironmentData = {
 type AppData = {
   id: number;
   name: string;
+  slug: string;
   slack_notification_channel: string | null;
   slack_notification_webhook_url: string | null;
   collaborators: Collaborator[];
@@ -88,6 +90,7 @@ export default function AppEdit({
 }) {
   const { errors: pageErrors } = usePage().props;
   const [name, setName] = useState(app.name);
+  const [slug, setSlug] = useState(app.slug);
   const [removeCollab, setRemoveCollab] = useState<Collaborator | null>(null);
   const [slackChannel, setSlackChannel] = useState(
     app.slack_notification_channel || "",
@@ -108,6 +111,7 @@ export default function AppEdit({
   const [editEnv, setEditEnv] = useState<EnvironmentData | null>(null);
   const [editEnvTypeId, setEditEnvTypeId] = useState<string>("");
   const [editEnvCustomLabel, setEditEnvCustomLabel] = useState("");
+  const [editEnvSlug, setEditEnvSlug] = useState("");
   const [deleteEnv, setDeleteEnv] = useState<EnvironmentData | null>(null);
   const [deleteConfirmLabel, setDeleteConfirmLabel] = useState("");
 
@@ -123,7 +127,7 @@ export default function AppEdit({
     setSaving(true);
     router.patch(
       `/apps/${app.id}`,
-      { name },
+      { name, slug },
       {
         onFinish: () => setSaving(false),
         preserveScroll: true,
@@ -212,6 +216,7 @@ export default function AppEdit({
       {
         environment_type_id: editEnvTypeId,
         custom_label: editEnvCustomLabel || null,
+        slug: editEnvSlug,
       },
       {
         onSuccess: () => {
@@ -242,6 +247,7 @@ export default function AppEdit({
   const openEditEnv = (env: EnvironmentData) => {
     setEditEnvTypeId(String(env.environment_type_id ?? ""));
     setEditEnvCustomLabel(env.custom_label || "");
+    setEditEnvSlug(env.slug || "");
     setEditEnv(env);
   };
 
@@ -286,6 +292,21 @@ export default function AppEdit({
                 value={name}
                 onChange={(e) => setName(e.currentTarget.value)}
                 className="flex-1"
+                required
+              />
+            </div>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5 sm:px-6 dark:border-gray-700">
+            <div className="flex items-center gap-4">
+              <label className="w-20 shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Slug
+              </label>
+              <TextInput
+                value={slug}
+                onChange={(e) => setSlug(e.currentTarget.value)}
+                className="flex-1"
+                description="Used in the Vault path (e.g. /v1/secret/data/<slug>/<env>)."
+                error={pageErrors?.slug}
                 required
               />
             </div>
@@ -484,6 +505,12 @@ export default function AppEdit({
               error={(pageErrors as any).custom_label}
             />
           )}
+          <TextInput
+            label="Slug"
+            value={editEnvSlug}
+            onChange={(e) => setEditEnvSlug(e.currentTarget.value)}
+            error={(pageErrors as any).slug}
+          />
           <Group justify="flex-end">
             <Button variant="outline" onClick={() => setEditEnv(null)}>
               Cancel

@@ -82,6 +82,7 @@ type EnvironmentType = {
 type Environment = {
   id: number;
   label: string;
+  slug: string;
   color: AppColor | undefined;
   variables: Variable[];
   environment_type: EnvironmentType | null;
@@ -362,11 +363,9 @@ export default function AppShow({
     <>
       <Head title={app.name} />
 
-      {/* Vault path (app slug / environment) */}
+      {/* Vault path (app slug / environment slug) */}
       {(() => {
-        const envSlug = (
-          currentEnv?.environment_type?.name ?? currentEnv?.label ?? ""
-        ).toLowerCase();
+        const envSlug = (currentEnv?.slug ?? "").toLowerCase();
         const vaultPath = envSlug ? `${app.slug}/${envSlug}` : app.slug;
         return (
           <Group gap="xs" mb="md">

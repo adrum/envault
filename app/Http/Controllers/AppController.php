@@ -136,15 +136,34 @@ class AppController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'slug' => [
+                'sometimes',
+                'required',
+                'string',
+                'alpha_dash',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('apps', 'slug')->ignore($app->id),
+            ],
         ]);
 
         $oldName = $app->name;
+        $oldSlug = $app->slug;
         $app->update($validated);
 
         if ($oldName !== $app->name) {
             LogEntry::create([
                 'action' => 'updated_name',
                 'description' => "Updated app name from \"{$oldName}\" to \"{$app->name}\"",
+                'loggable_type' => 'app',
+                'loggable_id' => $app->id,
+                'user_id' => $request->user()->id,
+            ]);
+        }
+
+        if (array_key_exists('slug', $validated) && $oldSlug !== $app->slug) {
+            LogEntry::create([
+                'action' => 'updated_slug',
+                'description' => "Updated app slug from \"{$oldSlug}\" to \"{$app->slug}\"",
                 'loggable_type' => 'app',
                 'loggable_id' => $app->id,
                 'user_id' => $request->user()->id,

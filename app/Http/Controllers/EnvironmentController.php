@@ -58,10 +58,46 @@ class EnvironmentController extends Controller
         $validated = $request->validate([
             'environment_type_id' => ['sometimes', 'exists:environment_types,id'],
             'custom_label' => ['nullable', 'string', 'max:255'],
+            'slug' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'alpha_dash',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('environments', 'slug')
+                    ->where('app_id', $environment->app_id)
+                    ->ignore($environment->id),
+            ],
         ]);
 
         $app = $environment->app;
         $oldLabel = $environment->label;
+        $oldSlug = $environment->slug;
+
+        if (array_key_exists('slug', $validated)) {
+            $desired = trim((string) $validated['slug']);
+
+            if ($desired === '') {
+                $desired = $this->deriveSlug(
+                    $environment->app_id,
+                    $environment->id,
+                    $validated['custom_label'] ?? $environment->custom_label,
+                    EnvironmentType::find($validated['environment_type_id'] ?? $environment->environment_type_id),
+                );
+            }
+
+            if ($desired !== $environment->slug) {
+                $environment->update(['slug' => $desired]);
+
+                LogEntry::create([
+                    'action' => 'environment_slug_updated',
+                    'description' => "Updated environment slug from \"{$oldSlug}\" to \"{$environment->slug}\" on \"{$app->name}\"",
+                    'loggable_type' => 'app',
+                    'loggable_id' => $app->id,
+                    'user_id' => $request->user()->id,
+                ]);
+            }
+        }
 
         // Reclassify to a different type
         if (isset($validated['environment_type_id']) && $validated['environment_type_id'] != $environment->environment_type_id) {
@@ -144,5 +180,23 @@ class EnvironmentController extends Controller
         $environment->delete();
 
         return back();
+    }
+
+    private function deriveSlug(int $appId, int $ignoreId, ?string $customLabel, ?EnvironmentType $type): string
+    {
+        $base = \Illuminate\Support\Str::slug($customLabel ?: ($type->name ?? 'default')) ?: 'default';
+
+        $slug = $base;
+        $counter = 2;
+        while (Environment::withTrashed()
+            ->where('app_id', $appId)
+            ->where('id', '!=', $ignoreId)
+            ->where('slug', $slug)
+            ->exists()
+        ) {
+            $slug = $base . '-' . $counter++;
+        }
+
+        return $slug;
     }
 }

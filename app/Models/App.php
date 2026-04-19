@@ -52,12 +52,6 @@ class App extends Model
             });
         });
 
-        static::restoring(function (App $app) {
-            $app->environments()->withTrashed()->each(function ($environment) {
-                $environment->restore();
-                $environment->variables()->withTrashed()->restore();
-            });
-        });
     }
 
     public function notificationsEnabled(): bool

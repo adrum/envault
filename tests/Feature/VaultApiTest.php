@@ -50,10 +50,6 @@ it('lists apps the user can access', function () {
 
 it('lists environments for an app', function () {
     $app = App::create(['name' => 'Test App']);
-    $app->environments()->create([
-        'environment_type_id' => $this->type->id,
-        'label' => 'Default',
-    ]);
 
     $this->getJson('/api/v1/secret/metadata/' . $app->slug, [
         'X-Vault-Token' => $this->token,

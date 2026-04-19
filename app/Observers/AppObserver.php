@@ -41,12 +41,13 @@ class AppObserver
 
     /**
      * Handle the app "restored" event.
-     *
-     * @return void
      */
-    public function restored(App $app)
+    public function restored(App $app): void
     {
-        $app->variables()->withTrashed()->where('deleted_at', '>=', $app->deleted_at)->restore();
+        $app->environments()->withTrashed()->each(function (Environment $environment) {
+            $environment->restore();
+            $environment->variables()->withTrashed()->restore();
+        });
     }
 
     /**

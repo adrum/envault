@@ -46,7 +46,6 @@ class AppController extends Controller
         $this->authorize('view', $app);
 
         $app->load([
-            'environments.variables.latest_version',
             'environments.variables.versions' => fn ($q) => $q->with('user:id,first_name,last_name')->latest(),
         ]);
 

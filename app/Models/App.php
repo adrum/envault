@@ -51,7 +51,6 @@ class App extends Model
                 $environment->delete();
             });
         });
-
     }
 
     public function notificationsEnabled(): bool

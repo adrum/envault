@@ -7,33 +7,36 @@ use App\Models\Variable;
 
 class VariablePolicy
 {
-    /**
-     * Determine whether the user can delete the model.
-     *
-     * @return mixed
-     */
-    public function delete(User $user, Variable $variable)
+    public function view(User $user, Variable $variable): bool
     {
-        return $user->isAdminOrOwner() || $user->isAppAdmin($variable->app);
+        if ($user->isAdminOrOwner()) {
+            return true;
+        }
+
+        $app = $variable->app;
+
+        return $app !== null && $user->isAppCollaborator($app);
     }
 
-    /**
-     * Determine whether the user can update the model.
-     *
-     * @return mixed
-     */
-    public function update(User $user, Variable $variable)
+    public function update(User $user, Variable $variable): bool
     {
-        return $user->isAdminOrOwner() || $user->isAppAdmin($variable->app);
+        if ($user->isAdminOrOwner()) {
+            return true;
+        }
+
+        $app = $variable->app;
+
+        return $app !== null && $user->isAppAdmin($app);
     }
 
-    /**
-     * Determine whether the user can view the model.
-     *
-     * @return mixed
-     */
-    public function view(User $user, Variable $variable)
+    public function delete(User $user, Variable $variable): bool
     {
-        return $user->isAdminOrOwner() || $user->isAppCollaborator($variable->app);
+        if ($user->isAdminOrOwner()) {
+            return true;
+        }
+
+        $app = $variable->app;
+
+        return $app !== null && $user->isAppAdmin($app);
     }
 }

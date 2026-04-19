@@ -146,9 +146,6 @@ export default function AppFancyLayout({
                     </Text>
                   </Menu.Label>
                   <Menu.Divider />
-                  <Menu.Item component={"a"} href="/docs">
-                    Documentation
-                  </Menu.Item>
                   <Menu.Item component={Link} href="/settings/profile">
                     My Account
                   </Menu.Item>

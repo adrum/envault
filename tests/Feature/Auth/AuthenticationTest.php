@@ -4,10 +4,10 @@ use App\Models\User;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\RateLimiter;
 
-test('login screen can be rendered', function () {
-    $response = $this->get(route('login'));
+test('login screen redirects to email-code auth', function () {
+    User::factory()->create();
 
-    $response->assertOk();
+    $this->get(route('login'))->assertRedirect(route('auth.email-code'));
 });
 
 test('users can authenticate using the login screen', function () {

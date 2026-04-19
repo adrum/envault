@@ -40,10 +40,11 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${active
-        ? "bg-gray-900 text-white"
-        : "text-gray-300 hover:bg-gray-700 hover:text-white"
-        }`}
+      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "bg-gray-900 text-white"
+          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+      }`}
     >
       <FontAwesomeIcon icon={item.icon} className="size-4" />
       <span>{item.label}</span>
@@ -71,9 +72,9 @@ export default function AppFancyLayout({
     { label: "Apps", href: "/apps", icon: faBoxesStacked },
     ...(can.administrate
       ? [
-        { label: "Audit Log", href: "/log", icon: faClipboardList },
-        { label: "Users", href: "/users", icon: faUsers },
-      ]
+          { label: "Audit Log", href: "/log", icon: faClipboardList },
+          { label: "Users", href: "/users", icon: faUsers },
+        ]
       : []),
   ];
 

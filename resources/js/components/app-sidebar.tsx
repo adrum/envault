@@ -49,17 +49,17 @@ export function AppSidebar({
     },
     ...(can.administrate
       ? [
-        {
-          title: "Audit Log",
-          href: "/log",
-          icon: faClipboardList,
-        },
-        {
-          title: "Users",
-          href: "/users",
-          icon: faUsers,
-        },
-      ]
+          {
+            title: "Audit Log",
+            href: "/log",
+            icon: faClipboardList,
+          },
+          {
+            title: "Users",
+            href: "/users",
+            icon: faUsers,
+          },
+        ]
       : []),
   ];
 

@@ -1,5 +1,5 @@
-import "@inertiajs/core";
 import type { Auth } from "@/types/auth";
+import "@inertiajs/core";
 import type { Session } from "./session";
 
 declare module "@inertiajs/core" {

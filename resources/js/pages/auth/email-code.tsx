@@ -6,7 +6,7 @@ import { SSOLinks } from "./sso-links";
 interface EmailCodeProps {
   step: "email" | "code";
   email?: string;
-  passwordAuthEnabled?: boolean
+  passwordAuthEnabled?: boolean;
 }
 
 export default function EmailCode({

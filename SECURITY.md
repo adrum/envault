@@ -4,9 +4,10 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x     | :white_check_mark: |
-| 1.x     | :white_check_mark: |
+| 3.x     | :white_check_mark: |
+| 2.x     | :x:                |
+| 1.x     | :x:                |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Envault, please email Dan Harrin via [dan@envault.dev](mailto:dan@envault.dev). All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within Envault, please open an issue via GitHub.

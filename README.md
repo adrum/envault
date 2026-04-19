@@ -31,19 +31,89 @@ Simply install Envault onto your own web server and you're ready to sync all you
 
 Envault is built on [the Laravel PHP framework](https://laravel.com). This makes installation very simple.
 
-1) Clone this repository onto your server and run `composer update`.
-2) Copy the `.env.example` to `.env`.
-3) Generate a new `APP_KEY` in your `.env` by running `php artisan key:generate` in the terminal.
-4) Ensure that the `APP_URL` in `.env` matches the address of your Envault server.
-3) Create a new database. For more details on the databases supported, please refer to [the Laravel documentation](https://laravel.com/docs/master/database#introduction). Fill out any appropriate connection details in your `.env` file.
-4) Run `php artisan migrate` to prepare your database.
-4) Configure outgoing mail from your Envault server. For more details on the mail drivers supported, please refer to [the Laravel documentation](https://laravel.com/docs/master/mail#introduction). Fill out any appropriate connection details in your `.env` file.
-5) Set up a scheduled task to run `php artisan schedule:run` every minute. For more details, please refer to [the Laravel documentation](https://laravel.com/docs/master/scheduling#introduction).
-6) Visit your Envault server URL and setup your owner account.
+1. Clone this repository onto your server and run `composer update`.
+2. Copy the `.env.example` to `.env`.
+3. Generate a new `APP_KEY` in your `.env` by running `php artisan key:generate` in the terminal.
+4. Ensure that the `APP_URL` in `.env` matches the address of your Envault server.
+5. Create a new database. For more details on the databases supported, please refer to [the Laravel documentation](https://laravel.com/docs/master/database#introduction). Fill out any appropriate connection details in your `.env` file.
+6. Run `php artisan migrate` to prepare your database.
+7. Configure outgoing mail from your Envault server. For more details on the mail drivers supported, please refer to [the Laravel documentation](https://laravel.com/docs/master/mail#introduction). Fill out any appropriate connection details in your `.env` file.
+8. Set up a scheduled task to run `php artisan schedule:run` every minute. For more details, please refer to [the Laravel documentation](https://laravel.com/docs/master/scheduling#introduction).
+9. Visit your Envault server URL and setup your owner account.
 
 We also have installation guides for specific platforms like [Laravel Forge](https://vimeo.com/414958726) and [Laravel Vapor](https://github.com/envault/envault/wiki/Installing-Envault-on-Laravel-Vapor).
 
-## Update Guide
+## Running with Docker
+
+Envault ships with a `Dockerfile` that builds a production image (FrankenPHP + scheduler + queue worker via supervisord).
+
+1. Create necessary files:
+
+### compose.yml
+
+```yaml
+services:
+  app:
+    image: ghcr.io/adrum/envault:3
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: envault
+      MYSQL_USER: envault
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - db-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
+volumes:
+  db-data:
+  redis-data:
+```
+
+### .env
+
+```
+APP_KEY=
+APP_URL=http://localhost:8080
+
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_DATABASE=envault
+DB_USERNAME=envault
+DB_PASSWORD=secret
+
+REDIS_HOST=redis
+```
+
+2. Generate an `APP_KEY` and put it in `.env`:
+
+```
+docker run --rm composer:2 php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
+```
+
+3. Start the container:
+
+```
+docker compose up -d
+```
+
+Envault will be available at <http://localhost:8080>. Migrations run automatically on container start.
+
+## Update Guide (non-Docker)
 
 After you update Envault from this repository, please run the following commands on your server. If you're using a platform like Laravel Forge, these can be added to your deploy script:
 
@@ -57,6 +127,7 @@ php artisan queue:restart
 ## Documentation
 
 ### The Basics
+
 - [Introduction](https://vimeo.com/414894566)
 - [Creating a new app](https://github.com/envault/envault/wiki/Creating-an-app)
 - [Creating a new variable](https://github.com/envault/envault/wiki/Creating-a-new-variable)
@@ -64,12 +135,14 @@ php artisan queue:restart
 - [Update a variable](https://github.com/envault/envault/wiki/Update-a-variable)
 
 ### Diving Deeper
+
 - [Importing variables from .env format](https://github.com/envault/envault/wiki/Importing-variables-from-.env-format)
 - [Rolling back a variable to a previous version](https://github.com/envault/envault/wiki/Rolling-back-a-variable-to-a-previous-version)
 - [Managing Slack notifications](https://github.com/envault/envault/wiki/Managing-Slack-notifications)
 - [Update an app](https://github.com/envault/envault/wiki/Update-an-app)
 
 ### Users and Permissions
+
 - [Creating a new user](https://github.com/envault/envault/wiki/Creating-a-new-user)
 - [Managing a user's permissions](https://github.com/envault/envault/wiki/Managing-a-user's-permissions)
 - [Managing an app's collaborators](https://github.com/envault/envault/wiki/Managing-an-app's-collaborators)
@@ -77,11 +150,11 @@ php artisan queue:restart
 
 ## Roadmap
 
-- [Multiple environments per app.](https://github.com/envault/envault/discussions/23)
+- [✅ Multiple environments per app.](https://github.com/envault/envault/discussions/23)
 - [Webooks.](https://github.com/envault/envault/discussions/17)
 - [Granular user permissions system.](https://github.com/envault/envault/discussions/15)
 - Bidirectional syncing.
-- [Docker image.](https://github.com/envault/envault/discussions/1)
+- [✅ Docker image.](https://github.com/envault/envault/discussions/1)
 
 ## Need Help?
 

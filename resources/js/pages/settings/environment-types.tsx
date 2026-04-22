@@ -128,7 +128,7 @@ function SortableTypeRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={`dark:bg-dark-700 bg-white ${!isFirst ? "border-t border-gray-200 dark:border-gray-700" : ""}`}
+      className={`bg-white dark:bg-gray-900 ${!isFirst ? "border-t border-gray-200 dark:border-gray-700" : ""}`}
     >
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">

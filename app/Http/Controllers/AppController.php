@@ -83,19 +83,6 @@ class AppController extends Controller
 
         $app = App::create($validated);
 
-        // Create default environment
-        $defaultType = \App\Models\EnvironmentType::query()
-            ->orderBy('sort_order')
-            ->first();
-
-        if ($defaultType) {
-            $app->environments()->create([
-                'environment_type_id' => $defaultType->id,
-                'label' => $defaultType->name,
-                'color' => $defaultType->color,
-            ]);
-        }
-
         LogEntry::create([
             'action' => 'created',
             'description' => "Created app \"{$app->name}\"",

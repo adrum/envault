@@ -68,6 +68,11 @@ class VariableController extends Controller
         $imported = 0;
         $sortOrder = 0;
         $processedKeys = [];
+        $originalOrder = $app->variables()
+            ->where('environment_id', $validated['environment_id'])
+            ->orderBy('sort_order')
+            ->pluck('key')
+            ->all();
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -107,14 +112,25 @@ class VariableController extends Controller
             $sortOrder++;
         }
 
-        // Any existing variables not in the import keep their relative order after the imported ones
+        // Any existing variables not in the import are removed
+        $deleted = 0;
         $app->variables()
             ->where('environment_id', $validated['environment_id'])
             ->whereNotIn('key', $processedKeys)
-            ->orderBy('sort_order')
-            ->each(function ($variable) use (&$sortOrder) {
-                $variable->update(['sort_order' => $sortOrder++]);
+            ->each(function ($variable) use ($app, $request, &$deleted, &$originalOrder) {
+                $originalOrder = array_values(array_filter($originalOrder, fn ($k) => $k !== $variable->key));
+                LogEntry::create([
+                    'action' => 'deleted',
+                    'description' => "Deleted variable \"{$variable->key}\" from \"{$app->name}\"",
+                    'loggable_type' => 'variable',
+                    'loggable_id' => $variable->id,
+                    'user_id' => $request->user()->id,
+                ]);
+                $variable->delete();
+                $deleted++;
             });
+
+        $reordered = array_values(array_intersect($processedKeys, $originalOrder)) !== array_values($originalOrder);
 
         if ($imported > 0) {
             LogEntry::create([
@@ -128,7 +144,7 @@ class VariableController extends Controller
             if ($app->notificationsEnabled()) {
                 $app->notify(new \App\Notifications\VariablesImportedNotification($imported, $request->user()));
             }
-        } else {
+        } elseif ($reordered && $deleted === 0) {
             LogEntry::create([
                 'action' => 'reordered',
                 'description' => "Reordered variables in \"{$app->name}\"",

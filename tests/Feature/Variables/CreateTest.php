@@ -66,6 +66,26 @@ test('can import variable with excess whitespace', function () {
     ]);
 });
 
+test('import removes variables that are not in the content', function () {
+    $app = App::factory()->create();
+    $environmentId = $app->environments()->value('environments.id');
+
+    $keptVariable = $app->variables()->create(
+        Variable::factory()->make(['environment_id' => $environmentId, 'key' => 'KEEP_ME'])->toArray(),
+    );
+    $removedVariable = $app->variables()->create(
+        Variable::factory()->make(['environment_id' => $environmentId, 'key' => 'REMOVE_ME'])->toArray(),
+    );
+
+    $this->post(route('variables.import', $app), [
+        'env_content' => 'KEEP_ME=stillhere',
+        'environment_id' => $environmentId,
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('variables', ['id' => $keptVariable->id, 'deleted_at' => null]);
+    $this->assertSoftDeleted('variables', ['id' => $removedVariable->id]);
+});
+
 test('key is alpha dash', function () {
     $app = App::factory()->create();
 

@@ -32,7 +32,7 @@
         }
     </style>
 
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
+    <title inertia>{{ config('app.name', 'Envault') }}</title>
 
     <link rel="icon" href="/images/favicon.png" type="image/png" />
 

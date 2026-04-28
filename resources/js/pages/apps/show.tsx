@@ -1,4 +1,5 @@
 import { AppColor } from "@/colors";
+import { javascript } from "@codemirror/lang-javascript";
 import { StreamLanguage } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
 import {
@@ -23,11 +24,12 @@ import {
   Modal,
   Select,
   Stack,
+  Switch,
   Text,
   Textarea,
   TextInput,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useWindowEvent } from "@mantine/hooks";
 import CodeMirror from "@uiw/react-codemirror";
 import { useEffect, useRef, useState } from "react";
 
@@ -57,6 +59,84 @@ const envLanguage = StreamLanguage.define({
     return null;
   },
 });
+
+// Coerce a string env value to a JSON-friendly type for nicer appsettings.json output.
+const coerceJsonValue = (raw: string): string | number | boolean | null => {
+  if (raw === "") return "";
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (raw === "null") return null;
+  if (/^-?\d+$/.test(raw)) {
+    const n = Number(raw);
+    if (Number.isSafeInteger(n)) return n;
+  }
+  if (/^-?\d+\.\d+$/.test(raw)) return Number(raw);
+  return raw;
+};
+
+// Convert ASP.NET-style flat env content (Section__Key=value, Section__0__Key=value)
+// into a nested JSON string. Numeric path segments produce arrays.
+const envToNestedJson = (env: string): string => {
+  const root: Record<string, unknown> = {};
+  for (const rawLine of env.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq < 0) continue;
+    const key = line.substring(0, eq).trim();
+    const value = rawLine.substring(rawLine.indexOf("=") + 1);
+    const parts = key.split("__");
+    let cursor: Record<string | number, unknown> = root as Record<
+      string | number,
+      unknown
+    >;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isIndex = /^\d+$/.test(part);
+      const segment: string | number = isIndex ? Number(part) : part;
+      if (i === parts.length - 1) {
+        cursor[segment] = coerceJsonValue(value);
+      } else {
+        const nextIsIndex = /^\d+$/.test(parts[i + 1]);
+        if (
+          cursor[segment] === undefined ||
+          typeof cursor[segment] !== "object" ||
+          cursor[segment] === null
+        ) {
+          cursor[segment] = nextIsIndex ? [] : {};
+        }
+        cursor = cursor[segment] as Record<string | number, unknown>;
+      }
+    }
+  }
+  return JSON.stringify(root, null, 2);
+};
+
+// Convert a nested JSON string back to the flat ASP.NET-style env representation.
+const nestedJsonToEnv = (json: string): string => {
+  const parsed: unknown = JSON.parse(json);
+  const lines: string[] = [];
+  const formatScalar = (v: unknown): string => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "boolean") return v ? "true" : "false";
+    return String(v);
+  };
+  const walk = (node: unknown, path: string[]): void => {
+    if (node === null || typeof node !== "object") {
+      lines.push(`${path.join("__")}=${formatScalar(node)}`);
+      return;
+    }
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walk(item, [...path, String(i)]));
+      return;
+    }
+    for (const k of Object.keys(node as Record<string, unknown>)) {
+      walk((node as Record<string, unknown>)[k], [...path, k]);
+    }
+  };
+  walk(parsed, []);
+  return lines.join("\n");
+};
 
 type VariableVersion = {
   id: number;
@@ -156,7 +236,36 @@ export default function AppShow({
   const [bulkOpened, { open: openBulk, close: closeBulk }] =
     useDisclosure(false);
   const [bulkContent, setBulkContent] = useState("");
+  const [bulkJsonMode, setBulkJsonMode] = useState(false);
+  const [bulkJsonContent, setBulkJsonContent] = useState("");
+  const [bulkJsonError, setBulkJsonError] = useState<string | null>(null);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  let bulkJsonValid = true;
+  let bulkJsonParseError: string | null = null;
+  if (bulkJsonMode && bulkJsonContent.trim()) {
+    try {
+      JSON.parse(bulkJsonContent);
+    } catch (err) {
+      bulkJsonValid = false;
+      bulkJsonParseError = err instanceof Error ? err.message : "Invalid JSON";
+    }
+  }
+  const [altPressed, setAltPressed] = useState(false);
+  useWindowEvent("keydown", (e) => setAltPressed(e.altKey));
+  useWindowEvent("keyup", (e) => setAltPressed(e.altKey));
+  useWindowEvent("blur", () => setAltPressed(false));
+
+  const envText = (currentEnv?.variables ?? [])
+    .map((v) => `${v.key}=${v.latest_version?.value ?? ""}`)
+    .join("\n");
+  let copyValue = envText;
+  if (altPressed) {
+    try {
+      copyValue = envToNestedJson(envText);
+    } catch {
+      // fall back to env text
+    }
+  }
 
   useEffect(() => {
     setLayoutProps({
@@ -317,26 +426,71 @@ export default function AppShow({
     }
 
     setBulkContent(grouped.join("\n"));
+    setBulkJsonMode(false);
+    setBulkJsonContent("");
+    setBulkJsonError(null);
     openBulk();
+  };
+
+  const toggleBulkJsonMode = (enabled: boolean) => {
+    if (enabled) {
+      try {
+        setBulkJsonContent(envToNestedJson(bulkContent));
+        setBulkJsonError(null);
+        setBulkJsonMode(true);
+      } catch (err) {
+        setBulkJsonError(
+          err instanceof Error ? err.message : "Failed to parse env content",
+        );
+      }
+      return;
+    }
+    try {
+      setBulkContent(nestedJsonToEnv(bulkJsonContent));
+      setBulkJsonError(null);
+      setBulkJsonMode(false);
+    } catch (err) {
+      setBulkJsonError(
+        err instanceof Error ? err.message : "Invalid JSON",
+      );
+    }
   };
 
   const isProductionEnv =
     currentEnv?.environment_type?.name?.toLowerCase() === "production";
 
+  const resolveBulkEnvContent = (): string | null => {
+    if (!bulkJsonMode) return bulkContent;
+    try {
+      const env = nestedJsonToEnv(bulkJsonContent);
+      setBulkJsonError(null);
+      return env;
+    } catch (err) {
+      setBulkJsonError(
+        err instanceof Error ? err.message : "Invalid JSON",
+      );
+      return null;
+    }
+  };
+
   const handleBulkSaveAttempt = () => {
+    const env = resolveBulkEnvContent();
+    if (env === null) return;
     if (isProductionEnv) {
       setBulkConfirmOpen(true);
       return;
     }
-    executeBulkSave();
+    executeBulkSave(env);
   };
 
-  const executeBulkSave = () => {
+  const executeBulkSave = (envOverride?: string) => {
+    const env = envOverride ?? resolveBulkEnvContent();
+    if (env === null) return;
     setSaving(true);
     setBulkConfirmOpen(false);
     router.post(
       `/apps/${app.id}/variables/import`,
-      { env_content: bulkContent, environment_id: currentEnv?.id },
+      { env_content: env, environment_id: currentEnv?.id },
       {
         onSuccess: () => {
           closeBulk();
@@ -478,11 +632,7 @@ export default function AppShow({
               Bulk Edit
             </Button>
             {(currentEnv?.variables.length ?? 0) > 0 && (
-              <CopyButton
-                value={(currentEnv?.variables ?? [])
-                  .map((v) => `${v.key}=${v.latest_version?.value ?? ""}`)
-                  .join("\n")}
-              >
+              <CopyButton value={copyValue}>
                 {({ copied, copy }) => (
                   <Button
                     variant="subtle"
@@ -492,8 +642,13 @@ export default function AppShow({
                     }
                     onClick={copy}
                     color={copied ? "teal" : undefined}
+                    title="Hold Option to copy as .env.json"
                   >
-                    {copied ? "Copied!" : "Copy .env"}
+                    {copied
+                      ? "Copied!"
+                      : altPressed
+                        ? "Copy .env.json"
+                        : "Copy .env"}
                   </Button>
                 )}
               </CopyButton>
@@ -723,37 +878,71 @@ export default function AppShow({
       >
         <Stack>
           <Text size="sm" c="dimmed">
-            Edit all variables as a .env file. Changes will be saved when you
-            click Save.
+            {bulkJsonMode
+              ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat ASP.NET-style keys using __ separators."
+              : "Edit all variables as a .env file. Changes will be saved when you click Save."}
           </Text>
+          {(bulkJsonError || bulkJsonParseError) && (
+            <Text size="sm" c="red">
+              {bulkJsonError ?? bulkJsonParseError}
+            </Text>
+          )}
           <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
-            <CodeMirror
-              value={bulkContent}
-              onChange={setBulkContent}
-              extensions={[envLanguage]}
-              theme={oneDark}
-              minHeight="300px"
-              maxHeight="500px"
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: false,
-                highlightActiveLine: true,
-                bracketMatching: false,
-              }}
-            />
+            {bulkJsonMode ? (
+              <CodeMirror
+                value={bulkJsonContent}
+                onChange={setBulkJsonContent}
+                extensions={[javascript({ jsx: false })]}
+                theme={oneDark}
+                minHeight="300px"
+                maxHeight="500px"
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: true,
+                  highlightActiveLine: true,
+                  bracketMatching: true,
+                }}
+              />
+            ) : (
+              <CodeMirror
+                value={bulkContent}
+                onChange={setBulkContent}
+                extensions={[envLanguage]}
+                theme={oneDark}
+                minHeight="300px"
+                maxHeight="500px"
+                basicSetup={{
+                  lineNumbers: true,
+                  foldGutter: false,
+                  highlightActiveLine: true,
+                  bracketMatching: false,
+                }}
+              />
+            )}
           </div>
-          <Group justify="flex-end">
-            <Button variant="outline" onClick={closeBulk}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleBulkSaveAttempt}
-              loading={saving}
-              disabled={!bulkContent.trim()}
-              leftSection={<FontAwesomeIcon icon={faCheck} />}
-            >
-              Save
-            </Button>
+          <Group justify="space-between">
+            <Switch
+              checked={bulkJsonMode}
+              onChange={(e) => toggleBulkJsonMode(e.currentTarget.checked)}
+              label="JSON mode"
+            />
+            <Group>
+              <Button variant="outline" onClick={closeBulk}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkSaveAttempt}
+                loading={saving}
+                disabled={
+                  bulkJsonMode
+                    ? !bulkJsonContent.trim() || !bulkJsonValid
+                    : !bulkContent.trim()
+                }
+                leftSection={<FontAwesomeIcon icon={faCheck} />}
+              >
+                Save
+              </Button>
+            </Group>
           </Group>
         </Stack>
       </Modal>
@@ -800,7 +989,7 @@ export default function AppShow({
           <Button variant="outline" onClick={() => setBulkConfirmOpen(false)}>
             Cancel
           </Button>
-          <Button color="red" onClick={executeBulkSave} loading={saving}>
+          <Button color="red" onClick={() => executeBulkSave()} loading={saving}>
             Yes, save changes
           </Button>
         </Group>

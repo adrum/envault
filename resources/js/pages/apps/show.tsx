@@ -144,6 +144,11 @@ const nestedJsonToEnv = (json: string): string => {
   return lines.join("\n");
 };
 
+// Heuristic: does this set of keys look like an ASP.NET-style nested config
+// (i.e. uses `__` between segments to express hierarchy)?
+const keysLookNested = (keys: string[]): boolean =>
+  keys.some((k) => /[A-Za-z0-9]__[A-Za-z0-9]/.test(k));
+
 type VariableVersion = {
   id: number;
   value: string;
@@ -266,15 +271,19 @@ export default function AppShow({
   const envText = (currentEnv?.variables ?? [])
     .map((v) => `${v.key}=${v.latest_version?.value ?? ""}`)
     .join("\n");
+  const looksNested =
+    jsonModeEnabled &&
+    keysLookNested((currentEnv?.variables ?? []).map((v) => v.key));
+  // Default to JSON when the variables look nested; Option inverts the default.
+  const copyAsJson = jsonModeEnabled && (looksNested ? !altPressed : altPressed);
   let copyValue = envText;
-  if (altPressed && jsonModeEnabled) {
+  if (copyAsJson) {
     try {
       copyValue = envToNestedJson(envText);
     } catch {
-      // fall back to env text
+      copyValue = envText;
     }
   }
-  const showJsonCopyHint = altPressed && jsonModeEnabled;
 
   useEffect(() => {
     setLayoutProps({
@@ -434,9 +443,20 @@ export default function AppShow({
       grouped.push(line);
     }
 
-    setBulkContent(grouped.join("\n"));
-    setBulkJsonMode(false);
-    setBulkJsonContent("");
+    const flat = grouped.join("\n");
+    setBulkContent(flat);
+    if (looksNested) {
+      try {
+        setBulkJsonContent(envToNestedJson(flat));
+        setBulkJsonMode(true);
+      } catch {
+        setBulkJsonContent("");
+        setBulkJsonMode(false);
+      }
+    } else {
+      setBulkJsonContent("");
+      setBulkJsonMode(false);
+    }
     setBulkJsonError(null);
     openBulk();
   };
@@ -653,13 +673,15 @@ export default function AppShow({
                     color={copied ? "teal" : undefined}
                     title={
                       jsonModeEnabled
-                        ? "Hold Option to copy as .env.json"
+                        ? looksNested
+                          ? "Hold Option to copy as .env"
+                          : "Hold Option to copy as .env.json"
                         : undefined
                     }
                   >
                     {copied
                       ? "Copied!"
-                      : showJsonCopyHint
+                      : copyAsJson
                         ? "Copy .env.json"
                         : "Copy .env"}
                   </Button>

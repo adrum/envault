@@ -14,6 +14,9 @@ declare module "@inertiajs/core" {
       can: {
         administrate: boolean;
       };
+      features: {
+        jsonMode: boolean;
+      };
       flash: {
         newToken?: string;
       };

@@ -59,6 +59,7 @@ class HandleInertiaRequests extends Middleware
                     'label' => config('services.laravelpassport.label'),
                     'logo' => config('services.laravelpassport.logo'),
                 ] : false,
+                'jsonMode' => Inertia::once(fn () => (bool) config('envault.features.json_mode')),
             ],
             'impersonating' => $request->session()->has('impersonator_id'),
         ];

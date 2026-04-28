@@ -7,4 +7,8 @@ return [
         'last_name' => env('USER_LAST_NAME'),
         'role' => env('USER_ROLE', 'user'),
     ],
+
+    'features' => [
+        'json_mode' => env('FEATURE_JSON_MODE', false),
+    ],
 ];

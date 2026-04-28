@@ -13,7 +13,13 @@ import {
   faUpload,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Head, Link, router, setLayoutProps } from "@inertiajs/react";
+import {
+  Head,
+  Link,
+  router,
+  setLayoutProps,
+  usePage,
+} from "@inertiajs/react";
 import {
   ActionIcon,
   Badge,
@@ -250,6 +256,8 @@ export default function AppShow({
       bulkJsonParseError = err instanceof Error ? err.message : "Invalid JSON";
     }
   }
+  const jsonModeEnabled = usePage().props.features.jsonMode;
+
   const [altPressed, setAltPressed] = useState(false);
   useWindowEvent("keydown", (e) => setAltPressed(e.altKey));
   useWindowEvent("keyup", (e) => setAltPressed(e.altKey));
@@ -259,13 +267,14 @@ export default function AppShow({
     .map((v) => `${v.key}=${v.latest_version?.value ?? ""}`)
     .join("\n");
   let copyValue = envText;
-  if (altPressed) {
+  if (altPressed && jsonModeEnabled) {
     try {
       copyValue = envToNestedJson(envText);
     } catch {
       // fall back to env text
     }
   }
+  const showJsonCopyHint = altPressed && jsonModeEnabled;
 
   useEffect(() => {
     setLayoutProps({
@@ -642,11 +651,15 @@ export default function AppShow({
                     }
                     onClick={copy}
                     color={copied ? "teal" : undefined}
-                    title="Hold Option to copy as .env.json"
+                    title={
+                      jsonModeEnabled
+                        ? "Hold Option to copy as .env.json"
+                        : undefined
+                    }
                   >
                     {copied
                       ? "Copied!"
-                      : altPressed
+                      : showJsonCopyHint
                         ? "Copy .env.json"
                         : "Copy .env"}
                   </Button>
@@ -921,11 +934,15 @@ export default function AppShow({
             )}
           </div>
           <Group justify="space-between">
-            <Switch
-              checked={bulkJsonMode}
-              onChange={(e) => toggleBulkJsonMode(e.currentTarget.checked)}
-              label="JSON mode"
-            />
+            {jsonModeEnabled ? (
+              <Switch
+                checked={bulkJsonMode}
+                onChange={(e) => toggleBulkJsonMode(e.currentTarget.checked)}
+                label="JSON mode"
+              />
+            ) : (
+              <span />
+            )}
             <Group>
               <Button variant="outline" onClick={closeBulk}>
                 Cancel

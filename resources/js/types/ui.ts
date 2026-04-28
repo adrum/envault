@@ -10,6 +10,11 @@ export type AppLayoutProps = {
 
 export type AppVariant = "header" | "sidebar";
 
+export type FlashToast = {
+  type: App.Enums.FlashToastType;
+  message: string;
+};
+
 export type AuthLayoutProps = {
   children?: ReactNode;
   name?: string;

@@ -91,6 +91,8 @@ class AppController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        toastSuccess("App \"{$app->name}\" created.");
+
         return redirect()->route('apps.show', $app);
     }
 
@@ -172,6 +174,8 @@ class AppController extends Controller
             ]);
         }
 
+        toastSuccess('App updated.');
+
         return back();
     }
 
@@ -197,6 +201,8 @@ class AppController extends Controller
 
         $app->delete();
 
+        toastSuccess("App \"{$app->name}\" deleted.");
+
         return redirect()->route('apps.index');
     }
 
@@ -218,6 +224,8 @@ class AppController extends Controller
             'loggable_id' => $app->id,
             'user_id' => $request->user()->id,
         ]);
+
+        toastSuccess('Notification settings updated.');
 
         return back();
     }
@@ -245,6 +253,8 @@ class AppController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        toastSuccess("Added {$user->name} as a collaborator.");
+
         return back();
     }
 
@@ -267,6 +277,8 @@ class AppController extends Controller
             'loggable_id' => $app->id,
             'user_id' => $request->user()->id,
         ]);
+
+        toastSuccess("Removed {$user->name} from this app.");
 
         return back();
     }
@@ -293,6 +305,8 @@ class AppController extends Controller
             'loggable_id' => $app->id,
             'user_id' => $request->user()->id,
         ]);
+
+        toastSuccess("Updated {$user->name}'s role to {$validated['role']}.");
 
         return back();
     }

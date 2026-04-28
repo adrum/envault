@@ -37,6 +37,8 @@ class EnvironmentTypeController extends Controller
             'sort_order' => $maxOrder + 1,
         ]);
 
+        toastSuccess("Environment type \"{$validated['name']}\" created.");
+
         return back();
     }
 
@@ -51,6 +53,8 @@ class EnvironmentTypeController extends Controller
         ]);
 
         $environmentType->update($validated);
+
+        toastSuccess("Environment type \"{$environmentType->name}\" updated.");
 
         return back();
     }
@@ -90,7 +94,10 @@ class EnvironmentTypeController extends Controller
             ]);
         }
 
+        $name = $environmentType->name;
         $environmentType->delete();
+
+        toastSuccess("Environment type \"{$name}\" deleted.");
 
         return back();
     }

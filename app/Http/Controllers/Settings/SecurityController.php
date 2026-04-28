@@ -54,6 +54,8 @@ class SecurityController extends Controller implements HasMiddleware
             'password' => $request->password,
         ]);
 
+        toastSuccess('Password updated.');
+
         return back();
     }
 }

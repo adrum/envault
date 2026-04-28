@@ -48,6 +48,8 @@ class EnvironmentController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        toastSuccess('Added "' . ($customLabel ?? $type->name) . '" environment.');
+
         return back();
     }
 
@@ -125,6 +127,8 @@ class EnvironmentController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
+            toastSuccess("Reclassified \"{$oldLabel}\" to \"{$environment->label}\".");
+
             return back();
         }
 
@@ -145,6 +149,8 @@ class EnvironmentController extends Controller
                 'user_id' => $request->user()->id,
             ]);
         }
+
+        toastSuccess('Environment updated.');
 
         return back();
     }
@@ -178,6 +184,8 @@ class EnvironmentController extends Controller
 
         $environment->variables()->delete();
         $environment->delete();
+
+        toastSuccess("Deleted \"{$label}\" environment.");
 
         return back();
     }

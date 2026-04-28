@@ -22,6 +22,8 @@ class ImpersonateController extends Controller
 
         Auth::login($user);
 
+        toastInfo("Now impersonating {$user->name}.");
+
         return redirect('/apps');
     }
 
@@ -34,6 +36,8 @@ class ImpersonateController extends Controller
         }
 
         Auth::loginUsingId($impersonatorId);
+
+        toastInfo('Stopped impersonating.');
 
         return redirect('/apps');
     }

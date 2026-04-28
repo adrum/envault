@@ -40,6 +40,8 @@ class UserManagementController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        toastSuccess("User \"{$user->name}\" created.");
+
         return back();
     }
 
@@ -92,6 +94,10 @@ class UserManagementController extends Controller
             ]);
         }
 
+        if ($hasProfileChanges || $newRole) {
+            toastSuccess("User \"{$user->name}\" updated.");
+        }
+
         return back();
     }
 
@@ -108,6 +114,8 @@ class UserManagementController extends Controller
         ]);
 
         $user->delete();
+
+        toastSuccess("User \"{$user->name}\" deleted.");
 
         return back();
     }

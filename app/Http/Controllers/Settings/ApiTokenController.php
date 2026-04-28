@@ -33,6 +33,8 @@ class ApiTokenController extends Controller
 
         $token = $request->user()->createToken($validated['name']);
 
+        toastSuccess("API token \"{$validated['name']}\" created.");
+
         return back()->with('newToken', $token->plainTextToken);
     }
 
@@ -44,12 +46,16 @@ class ApiTokenController extends Controller
 
         $request->user()->tokens()->where('id', $tokenId)->update(['name' => $validated['name']]);
 
+        toastSuccess('API token renamed.');
+
         return back();
     }
 
     public function destroy(Request $request, int $tokenId)
     {
         $request->user()->tokens()->where('id', $tokenId)->delete();
+
+        toastSuccess('API token revoked.');
 
         return back();
     }

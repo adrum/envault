@@ -49,6 +49,8 @@ class VariableController extends Controller
             $app->notify(new \App\Notifications\VariableCreatedNotification($variable, $request->user()));
         }
 
+        toastSuccess("Variable \"{$variable->key}\" created.");
+
         return back();
     }
 
@@ -154,6 +156,21 @@ class VariableController extends Controller
             ]);
         }
 
+        if ($imported > 0 || $deleted > 0) {
+            $parts = [];
+            if ($imported > 0) {
+                $parts[] = $imported . ' imported';
+            }
+            if ($deleted > 0) {
+                $parts[] = $deleted . ' removed';
+            }
+            toastSuccess('Variables synced (' . implode(', ', $parts) . ').');
+        } elseif ($reordered) {
+            toastSuccess('Variables reordered.');
+        } else {
+            toastInfo('No changes detected.');
+        }
+
         return back();
     }
 
@@ -205,6 +222,8 @@ class VariableController extends Controller
             }
         }
 
+        toastSuccess("Variable \"{$variable->key}\" updated.");
+
         return back();
     }
 
@@ -223,6 +242,8 @@ class VariableController extends Controller
         ]);
 
         $variable->delete();
+
+        toastSuccess("Variable \"{$variable->key}\" deleted.");
 
         return back();
     }
@@ -248,6 +269,8 @@ class VariableController extends Controller
             'loggable_id' => $variable->id,
             'user_id' => $request->user()->id,
         ]);
+
+        toastSuccess("Rolled back \"{$variable->key}\" to a previous version.");
 
         return back();
     }

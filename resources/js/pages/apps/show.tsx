@@ -80,7 +80,7 @@ const coerceJsonValue = (raw: string): string | number | boolean | null => {
   return raw;
 };
 
-// Convert ASP.NET-style flat env content (Section__Key=value, Section__0__Key=value)
+// Convert .NET-style flat env content (Section__Key=value, Section__0__Key=value)
 // into a nested JSON string. Numeric path segments produce arrays.
 const envToNestedJson = (env: string): string => {
   const root: Record<string, unknown> = {};
@@ -118,7 +118,7 @@ const envToNestedJson = (env: string): string => {
   return JSON.stringify(root, null, 2);
 };
 
-// Convert a nested JSON string back to the flat ASP.NET-style env representation.
+// Convert a nested JSON string back to the flat .NET-style env representation.
 const nestedJsonToEnv = (json: string): string => {
   const parsed: unknown = JSON.parse(json);
   const lines: string[] = [];
@@ -144,7 +144,7 @@ const nestedJsonToEnv = (json: string): string => {
   return lines.join("\n");
 };
 
-// Heuristic: does this set of keys look like an ASP.NET-style nested config
+// Heuristic: does this set of keys look like an .NET-style nested config
 // (i.e. uses `__` between segments to express hierarchy)?
 const keysLookNested = (keys: string[]): boolean =>
   keys.some((k) => /[A-Za-z0-9]__[A-Za-z0-9]/.test(k));
@@ -914,7 +914,7 @@ export default function AppShow({
         <Stack>
           <Text size="sm" c="dimmed">
             {bulkJsonMode
-              ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat ASP.NET-style keys using __ separators."
+              ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat .NET-style keys using __ separators."
               : "Edit all variables as a .env file. Changes will be saved when you click Save."}
           </Text>
           {(bulkJsonError || bulkJsonParseError) && (

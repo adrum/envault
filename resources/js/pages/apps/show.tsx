@@ -13,13 +13,7 @@ import {
   faUpload,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  Head,
-  Link,
-  router,
-  setLayoutProps,
-  usePage,
-} from "@inertiajs/react";
+import { Head, Link, router, setLayoutProps, usePage } from "@inertiajs/react";
 import {
   ActionIcon,
   Badge,
@@ -262,6 +256,7 @@ export default function AppShow({
     }
   }
   const jsonModeEnabled = usePage().props.features.jsonMode;
+  const pageErrors = usePage().props.errors;
 
   const [altPressed, setAltPressed] = useState(false);
   useWindowEvent("keydown", (e) => setAltPressed(e.altKey));
@@ -275,7 +270,8 @@ export default function AppShow({
     jsonModeEnabled &&
     keysLookNested((currentEnv?.variables ?? []).map((v) => v.key));
   // Default to JSON when the variables look nested; Option inverts the default.
-  const copyAsJson = jsonModeEnabled && (looksNested ? !altPressed : altPressed);
+  const copyAsJson =
+    jsonModeEnabled && (looksNested ? !altPressed : altPressed);
   let copyValue = envText;
   if (copyAsJson) {
     try {
@@ -479,9 +475,7 @@ export default function AppShow({
       setBulkJsonError(null);
       setBulkJsonMode(false);
     } catch (err) {
-      setBulkJsonError(
-        err instanceof Error ? err.message : "Invalid JSON",
-      );
+      setBulkJsonError(err instanceof Error ? err.message : "Invalid JSON");
     }
   };
 
@@ -495,9 +489,7 @@ export default function AppShow({
       setBulkJsonError(null);
       return env;
     } catch (err) {
-      setBulkJsonError(
-        err instanceof Error ? err.message : "Invalid JSON",
-      );
+      setBulkJsonError(err instanceof Error ? err.message : "Invalid JSON");
       return null;
     }
   };
@@ -751,6 +743,7 @@ export default function AppShow({
                     setNewKey(e.currentTarget.value.toUpperCase())
                   }
                   className="flex-1"
+                  error={pageErrors?.key}
                 />
               </div>
               <div className="flex items-center gap-4 pt-5">
@@ -762,6 +755,7 @@ export default function AppShow({
                   value={newValue}
                   onChange={(e) => setNewValue(e.currentTarget.value)}
                   className="flex-1"
+                  error={pageErrors?.value}
                 />
               </div>
             </div>
@@ -1028,7 +1022,11 @@ export default function AppShow({
           <Button variant="outline" onClick={() => setBulkConfirmOpen(false)}>
             Cancel
           </Button>
-          <Button color="red" onClick={() => executeBulkSave()} loading={saving}>
+          <Button
+            color="red"
+            onClick={() => executeBulkSave()}
+            loading={saving}
+          >
             Yes, save changes
           </Button>
         </Group>

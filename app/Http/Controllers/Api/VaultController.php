@@ -116,6 +116,8 @@ class VaultController extends Controller
             }
         }
 
+        $data = $this->expandReferences($data);
+
         return response()->json([
             'request_id' => (string) \Illuminate\Support\Str::uuid(),
             'lease_id' => '',
@@ -135,6 +137,53 @@ class VaultController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Resolve ${VAR} references within the given key/value map.
+     *
+     * Mirrors phpdotenv's variable expansion so consumers receive fully
+     * resolved values regardless of how they inject env vars at runtime.
+     *
+     * @param  array<string, string>  $data
+     * @return array<string, string>
+     */
+    private function expandReferences(array $data): array
+    {
+        $pattern = '/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/';
+
+        foreach ($data as $key => $value) {
+            $resolving = [$key => true];
+            $current = $value;
+
+            for ($i = 0; $i < 10; $i++) {
+                if (!is_string($current) || !preg_match($pattern, $current)) {
+                    break;
+                }
+
+                $next = preg_replace_callback($pattern, function ($matches) use ($data, &$resolving) {
+                    $ref = $matches[1];
+
+                    if (isset($resolving[$ref]) || !array_key_exists($ref, $data)) {
+                        return $matches[0];
+                    }
+
+                    $resolving[$ref] = true;
+
+                    return $data[$ref];
+                }, $current);
+
+                if ($next === $current) {
+                    break;
+                }
+
+                $current = $next;
+            }
+
+            $data[$key] = $current;
+        }
+
+        return $data;
     }
 
     /**

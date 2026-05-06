@@ -1,5 +1,4 @@
 import type { Auth } from "@/types/auth";
-import type { FlashToast } from "@/types/ui";
 import "@inertiajs/core";
 import type { Session } from "./session";
 

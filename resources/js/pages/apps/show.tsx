@@ -1,4 +1,6 @@
+import { preflight as preflightWarnings } from "@/actions/App/Http/Controllers/EnvironmentWarningController";
 import { AppColor } from "@/colors";
+import { WarningsModal, type Warning } from "@/components/warnings-modal";
 import { javascript } from "@codemirror/lang-javascript";
 import { StreamLanguage } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -245,6 +247,9 @@ export default function AppShow({
   const [bulkJsonContent, setBulkJsonContent] = useState("");
   const [bulkJsonError, setBulkJsonError] = useState<string | null>(null);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [pendingWarnings, setPendingWarnings] = useState<Warning[]>([]);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [warningsLoading, setWarningsLoading] = useState(false);
   let bulkJsonValid = true;
   let bulkJsonParseError: string | null = null;
   if (bulkJsonMode && bulkJsonContent.trim()) {
@@ -333,23 +338,114 @@ export default function AppShow({
     setModalMode(null);
   };
 
+  const currentEnvValueMap = (): Record<string, string> => {
+    const map: Record<string, string> = {};
+    for (const v of currentEnv?.variables ?? []) {
+      map[v.key] = v.latest_version?.value ?? "";
+    }
+    return map;
+  };
+
+  const parseEnvToMap = (env: string): Record<string, string> => {
+    const map: Record<string, string> = {};
+    for (const rawLine of env.split("\n")) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq < 0) continue;
+      const key = line.substring(0, eq).trim();
+      let value = rawLine.substring(rawLine.indexOf("=") + 1);
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      map[key] = value;
+    }
+    return map;
+  };
+
+  const runWithWarnings = async (
+    values: Record<string, string>,
+    action: () => void,
+  ) => {
+    if (!currentEnv) {
+      action();
+      return;
+    }
+    setWarningsLoading(true);
+    try {
+      const res = await fetch(
+        preflightWarnings({ app: app.id, environment: currentEnv.id }).url,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-XSRF-TOKEN": decodeURIComponent(
+              document.cookie
+                .split("; ")
+                .find((c) => c.startsWith("XSRF-TOKEN="))
+                ?.split("=")[1] ?? "",
+            ),
+          },
+          body: JSON.stringify({ values }),
+        },
+      );
+      if (!res.ok) {
+        action();
+        return;
+      }
+      const data: { warnings: Warning[] } = await res.json();
+      if (data.warnings.length === 0) {
+        action();
+        return;
+      }
+      setPendingWarnings(data.warnings);
+      setPendingAction(() => action);
+    } catch {
+      action();
+    } finally {
+      setWarningsLoading(false);
+    }
+  };
+
+  const closeWarningsModal = () => {
+    setPendingWarnings([]);
+    setPendingAction(null);
+  };
+
+  const confirmWarnings = () => {
+    const action = pendingAction;
+    closeWarningsModal();
+    action?.();
+  };
+
   const handleCreateVariable = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newKey.trim()) return;
-    setSaving(true);
-    router.post(
-      `/apps/${app.id}/variables`,
-      { key: newKey, value: newValue, environment_id: currentEnv?.id },
-      {
-        onSuccess: () => {
-          setNewKey("");
-          setNewValue("");
-          setSaving(false);
+
+    const submit = () => {
+      setSaving(true);
+      router.post(
+        `/apps/${app.id}/variables`,
+        { key: newKey, value: newValue, environment_id: currentEnv?.id },
+        {
+          onSuccess: () => {
+            setNewKey("");
+            setNewValue("");
+            setSaving(false);
+          },
+          onError: () => setSaving(false),
+          preserveScroll: true,
         },
-        onError: () => setSaving(false),
-        preserveScroll: true,
-      },
-    );
+      );
+    };
+
+    const proposed = { ...currentEnvValueMap(), [newKey]: newValue };
+    runWithWarnings(proposed, submit);
   };
 
   const handleImport = () => {
@@ -497,11 +593,14 @@ export default function AppShow({
   const handleBulkSaveAttempt = () => {
     const env = resolveBulkEnvContent();
     if (env === null) return;
-    if (isProductionEnv) {
-      setBulkConfirmOpen(true);
-      return;
-    }
-    executeBulkSave(env);
+    const proceed = () => {
+      if (isProductionEnv) {
+        setBulkConfirmOpen(true);
+        return;
+      }
+      executeBulkSave(env);
+    };
+    runWithWarnings(parseEnvToMap(env), proceed);
   };
 
   const executeBulkSave = (envOverride?: string) => {
@@ -1183,6 +1282,14 @@ export default function AppShow({
           </Button>
         </Group>
       </Modal>
+
+      <WarningsModal
+        opened={pendingWarnings.length > 0}
+        warnings={pendingWarnings}
+        onCancel={closeWarningsModal}
+        onConfirm={confirmWarnings}
+        loading={warningsLoading}
+      />
     </>
   );
 }

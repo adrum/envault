@@ -29,6 +29,12 @@ return [
     |   - unknown_value: warns when `key` is set to a value not in `allowed`.
     |   - requires_companions: warns when `key` equals `value` but one or
     |     more of the `requires` companion keys is missing or empty.
+    |   - empty_value: warns when `key` is missing or set to an empty string,
+    |     scoped optionally by `only_in` / `except_in`.
+    |   - placeholder_value: warns when a value matches one of the listed
+    |     `placeholders` (case-insensitive). If `key` is set, only that key
+    |     is checked. If `key` is null/omitted, every value in the env is
+    |     scanned and a warning is produced for each match.
     |
     */
     'warnings' => [
@@ -63,7 +69,7 @@ return [
         [
             'type' => 'unknown_value',
             'key' => 'MAIL_MAILER',
-            'allowed' => ['smtp', 'sendmail', 'mailgun', 'ses', 'postmark', 'resend', 'log', 'array', 'failover', 'roundrobin'],
+            'allowed' => ['smtp', 'sendmail', 'mailgun', 'ses', 'postmark', 'resend', 'cloudflare', 'log', 'array', 'failover', 'roundrobin'],
             'message' => 'MAIL_MAILER has an unrecognized value. Common drivers: smtp, mailgun, ses, postmark, resend, log.',
         ],
         [
@@ -125,6 +131,56 @@ return [
             'value' => 'reverb',
             'requires' => ['REVERB_APP_ID', 'REVERB_APP_KEY', 'REVERB_APP_SECRET'],
             'message' => 'reverb broadcast connection requires REVERB_APP_ID, REVERB_APP_KEY, and REVERB_APP_SECRET.',
+        ],
+        [
+            'type' => 'empty_value',
+            'key' => 'APP_KEY',
+            'message' => 'APP_KEY is empty. Laravel uses this for cookie/session encryption — leaving it blank breaks signed URLs, password resets, and anything encrypted.',
+        ],
+        [
+            'type' => 'empty_value',
+            'key' => 'DB_PASSWORD',
+            'only_in' => ['production', 'prod', 'staging'],
+            'message' => 'DB_PASSWORD is empty in a non-local environment. Make sure your database does not accept passwordless connections.',
+        ],
+        [
+            'type' => 'value_warning',
+            'key' => 'APP_URL',
+            'values' => ['http://localhost', 'http://127.0.0.1', 'https://localhost', 'https://127.0.0.1', 'http://localhost/', 'http://127.0.0.1/'],
+            'except_in' => ['local', 'development', 'dev'],
+            'message' => 'APP_URL points at localhost outside of a local environment. Mailable links, signed URLs, and OAuth callbacks will be unreachable.',
+        ],
+        [
+            'type' => 'value_warning',
+            'key' => 'SESSION_DRIVER',
+            'values' => ['array'],
+            'except_in' => ['local', 'development', 'dev', 'testing', 'test'],
+            'message' => 'SESSION_DRIVER=array discards sessions on every request. Use database, redis, or file in non-local environments.',
+        ],
+        [
+            'type' => 'value_warning',
+            'key' => 'CACHE_STORE',
+            'values' => ['array'],
+            'except_in' => ['local', 'development', 'dev', 'testing', 'test'],
+            'message' => 'CACHE_STORE=array does not persist between requests. Use database, redis, or memcached in non-local environments.',
+        ],
+        [
+            'type' => 'value_warning',
+            'key' => 'LOG_CHANNEL',
+            'values' => ['single'],
+            'only_in' => ['production', 'prod', 'staging'],
+            'message' => 'LOG_CHANNEL=single writes to one unrotated file. Use stack/daily in production to keep log volume manageable.',
+        ],
+        [
+            'type' => 'placeholder_value',
+            'key' => 'MAIL_FROM_ADDRESS',
+            'placeholders' => ['hello@example.com', 'noreply@example.com', 'you@example.com', 'test@example.com'],
+            'message' => 'MAIL_FROM_ADDRESS is still a placeholder. Outgoing mail will appear to come from example.com.',
+        ],
+        [
+            'type' => 'placeholder_value',
+            'placeholders' => ['changeme', 'change-me', 'your-key-here', 'your-secret-here', 'your-token-here', 'xxx', 'xxxx', 'xxxxx', 'todo', 'tbd', 'replace-me', 'placeholder'],
+            'message' => 'Value looks like a placeholder. Replace with a real value before saving.',
         ],
     ],
 ];

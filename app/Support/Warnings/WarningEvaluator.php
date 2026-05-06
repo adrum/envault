@@ -21,16 +21,72 @@ class WarningEvaluator
         $warnings = [];
 
         foreach ($rules as $rule) {
-            $warning = match ($rule['type'] ?? null) {
-                'value_warning' => $this->evaluateValueWarning($rule, $values, $envIdentifiers),
-                'unknown_value' => $this->evaluateUnknownValue($rule, $values),
-                'requires_companions' => $this->evaluateRequiresCompanions($rule, $values),
-                default => null,
+            $produced = match ($rule['type'] ?? null) {
+                'value_warning' => [$this->evaluateValueWarning($rule, $values, $envIdentifiers)],
+                'unknown_value' => [$this->evaluateUnknownValue($rule, $values)],
+                'requires_companions' => [$this->evaluateRequiresCompanions($rule, $values)],
+                'empty_value' => [$this->evaluateEmptyValue($rule, $values, $envIdentifiers)],
+                'placeholder_value' => $this->evaluatePlaceholderValue($rule, $values),
+                default => [],
             };
 
-            if ($warning !== null) {
-                $warnings[] = $warning;
+            foreach ($produced as $warning) {
+                if ($warning !== null) {
+                    $warnings[] = $warning;
+                }
             }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * @param  array<string, string>  $values
+     * @param  list<string>  $envIdentifiers
+     */
+    private function evaluateEmptyValue(array $rule, array $values, array $envIdentifiers): ?Warning
+    {
+        $key = $rule['key'];
+
+        if (array_key_exists($key, $values) && trim($values[$key]) !== '') {
+            return null;
+        }
+
+        if (!empty($rule['only_in']) && !$this->envMatches($envIdentifiers, $rule['only_in'])) {
+            return null;
+        }
+
+        if (!empty($rule['except_in']) && $this->envMatches($envIdentifiers, $rule['except_in'])) {
+            return null;
+        }
+
+        return new Warning($rule['message'], [$key]);
+    }
+
+    /**
+     * @param  array<string, string>  $values
+     * @return list<?Warning>
+     */
+    private function evaluatePlaceholderValue(array $rule, array $values): array
+    {
+        $placeholders = array_map('strtolower', $rule['placeholders'] ?? []);
+        $scopedKey = $rule['key'] ?? null;
+
+        $candidates = $scopedKey !== null
+            ? (array_key_exists($scopedKey, $values) ? [$scopedKey => $values[$scopedKey]] : [])
+            : $values;
+
+        $warnings = [];
+
+        foreach ($candidates as $key => $value) {
+            if (!in_array(strtolower(trim($value)), $placeholders, true)) {
+                continue;
+            }
+
+            $warnings[] = new Warning(
+                $scopedKey !== null ? $rule['message'] : $rule['message'] . ' (' . $key . ')',
+                [$key],
+            );
         }
 
         return $warnings;

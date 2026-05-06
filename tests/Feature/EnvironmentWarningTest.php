@@ -289,6 +289,15 @@ it('accepts cloudflare as a valid MAIL_MAILER', function () {
         ->assertJsonPath('warnings', []);
 });
 
+it('generates a fresh APP_KEY', function () {
+    $response = $this->postJson('/utilities/app-key')
+        ->assertOk();
+
+    $key = $response->json('key');
+    expect($key)->toStartWith('base64:');
+    expect(strlen($key))->toBeGreaterThan(20);
+});
+
 it('returns 404 when environment does not belong to app', function () {
     $otherApp = App::create(['name' => 'Other']);
 

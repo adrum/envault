@@ -10,6 +10,7 @@ type Props = {
   warnings: Warning[];
   onCancel: () => void;
   onConfirm: () => void;
+  onGenerateAppKey?: () => void;
   loading?: boolean;
 };
 
@@ -18,6 +19,7 @@ export function WarningsModal({
   warnings,
   onCancel,
   onConfirm,
+  onGenerateAppKey,
   loading,
 }: Props) {
   return (
@@ -33,20 +35,39 @@ export function WarningsModal({
           You can still proceed, but please review them first.
         </Text>
 
-        {warnings.map((warning, idx) => (
-          <Alert key={idx} color="yellow" variant="light">
-            <Stack gap="xs">
-              <Text size="sm">{warning.message}</Text>
-              {warning.keys.length > 0 && (
-                <Group gap="xs">
-                  {warning.keys.map((k) => (
-                    <Code key={k}>{k}</Code>
-                  ))}
-                </Group>
-              )}
-            </Stack>
-          </Alert>
-        ))}
+        {warnings.map((warning, idx) => {
+          const isAppKeyEmpty =
+            !!onGenerateAppKey &&
+            warning.keys.length === 1 &&
+            warning.keys[0] === "APP_KEY" &&
+            /APP_KEY is empty/.test(warning.message);
+
+          return (
+            <Alert key={idx} color="yellow" variant="light">
+              <Stack gap="xs">
+                <Text size="sm">{warning.message}</Text>
+                {warning.keys.length > 0 && (
+                  <Group gap="xs">
+                    {warning.keys.map((k) => (
+                      <Code key={k}>{k}</Code>
+                    ))}
+                  </Group>
+                )}
+                {isAppKeyEmpty && (
+                  <Group>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      onClick={onGenerateAppKey}
+                    >
+                      Generate one
+                    </Button>
+                  </Group>
+                )}
+              </Stack>
+            </Alert>
+          );
+        })}
 
         <Group justify="flex-end" mt="sm">
           <Button variant="default" onClick={onCancel} disabled={loading}>

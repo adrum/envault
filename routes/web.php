@@ -55,6 +55,7 @@ Route::middleware(RedirectIfNotSetup::class)->group(function () {
         Route::patch('environments/{environment}', [App\Http\Controllers\EnvironmentController::class, 'update'])->name('environments.update');
         Route::delete('environments/{environment}', [App\Http\Controllers\EnvironmentController::class, 'destroy'])->name('environments.destroy');
         Route::post('apps/{app}/environments/{environment}/warnings', [App\Http\Controllers\EnvironmentWarningController::class, 'preflight'])->name('environments.warnings.preflight');
+        Route::post('utilities/app-key', [App\Http\Controllers\AppKeyController::class, 'generate'])->name('utilities.app-key');
 
         // Variables
         Route::post('apps/{app}/variables', [VariableController::class, 'store'])->name('variables.store');

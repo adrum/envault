@@ -1,3 +1,4 @@
+import { generate as generateAppKey } from "@/actions/App/Http/Controllers/AppKeyController";
 import { preflight as preflightWarnings } from "@/actions/App/Http/Controllers/EnvironmentWarningController";
 import { AppColor } from "@/colors";
 import { WarningsModal, type Warning } from "@/components/warnings-modal";
@@ -32,6 +33,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useDisclosure, useWindowEvent } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import CodeMirror from "@uiw/react-codemirror";
 import { useEffect, useRef, useState } from "react";
 
@@ -421,6 +423,42 @@ export default function AppShow({
     const action = pendingAction;
     closeWarningsModal();
     action?.();
+  };
+
+  const handleGenerateAppKey = async () => {
+    try {
+      const res = await fetch(generateAppKey().url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-XSRF-TOKEN": decodeURIComponent(
+            document.cookie
+              .split("; ")
+              .find((c) => c.startsWith("XSRF-TOKEN="))
+              ?.split("=")[1] ?? "",
+          ),
+        },
+      });
+      if (!res.ok) return;
+      const data: { key: string } = await res.json();
+
+      if (newKey === "APP_KEY") {
+        setNewValue(data.key);
+        closeWarningsModal();
+        return;
+      }
+
+      await navigator.clipboard.writeText(data.key);
+      notifications.show({
+        title: "APP_KEY copied",
+        message:
+          "A fresh APP_KEY was copied to your clipboard. Paste it as the value.",
+        color: "green",
+      });
+    } catch {
+      // Network or clipboard error — silently no-op; user can retry.
+    }
   };
 
   const handleCreateVariable = (e: React.FormEvent) => {
@@ -1288,6 +1326,7 @@ export default function AppShow({
         warnings={pendingWarnings}
         onCancel={closeWarningsModal}
         onConfirm={confirmWarnings}
+        onGenerateAppKey={handleGenerateAppKey}
         loading={warningsLoading}
       />
     </>

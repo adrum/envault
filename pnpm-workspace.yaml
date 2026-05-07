@@ -1,0 +1,3 @@
+nodeLinker: "hoisted"
+publicHoistPattern:
+  - "@inertiajs/core"

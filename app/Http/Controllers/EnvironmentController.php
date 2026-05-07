@@ -33,12 +33,19 @@ class EnvironmentController extends Controller
             $customLabel = $validated['custom_label'];
         }
 
-        $app->environments()->create([
+        $environment = $app->environments()->create([
             'environment_type_id' => $type->id,
             'label' => $type->name,
             'color' => $type->color,
             'custom_label' => $customLabel,
         ]);
+
+        app(\App\Support\Webhooks\WebhookDispatcher::class)->dispatch(
+            \App\Support\Webhooks\WebhookEvents::ENVIRONMENT_CREATED,
+            $app,
+            $environment,
+            $request->user(),
+        );
 
         LogEntry::create([
             'action' => 'environment_added',
@@ -181,6 +188,13 @@ class EnvironmentController extends Controller
             'loggable_id' => $app->id,
             'user_id' => $request->user()->id,
         ]);
+
+        app(\App\Support\Webhooks\WebhookDispatcher::class)->dispatch(
+            \App\Support\Webhooks\WebhookEvents::ENVIRONMENT_DELETED,
+            $app,
+            $environment,
+            $request->user(),
+        );
 
         $environment->variables()->delete();
         $environment->delete();

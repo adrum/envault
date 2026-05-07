@@ -91,6 +91,13 @@ class AppController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        app(\App\Support\Webhooks\WebhookDispatcher::class)->dispatch(
+            \App\Support\Webhooks\WebhookEvents::APP_CREATED,
+            $app,
+            null,
+            $request->user(),
+        );
+
         toastSuccess("App \"{$app->name}\" created.");
 
         return redirect()->route('apps.show', $app);
@@ -198,6 +205,13 @@ class AppController extends Controller
             'loggable_id' => $app->id,
             'user_id' => $request->user()->id,
         ]);
+
+        app(\App\Support\Webhooks\WebhookDispatcher::class)->dispatch(
+            \App\Support\Webhooks\WebhookEvents::APP_DELETED,
+            $app,
+            null,
+            $request->user(),
+        );
 
         $app->delete();
 

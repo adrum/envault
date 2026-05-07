@@ -35,4 +35,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('settings/environments/{environmentType}', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'update'])->name('environment-types.update');
     Route::post('settings/environments/reorder', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'reorder'])->name('environment-types.reorder');
     Route::delete('settings/environments/{environmentType}', [App\Http\Controllers\Settings\EnvironmentTypeController::class, 'destroy'])->name('environment-types.destroy');
+
+    Route::get('settings/webhooks', [App\Http\Controllers\Settings\WebhookController::class, 'index'])->name('webhooks.index');
+    Route::post('settings/webhooks', [App\Http\Controllers\Settings\WebhookController::class, 'store'])->name('webhooks.store');
+    Route::patch('settings/webhooks/{webhook}', [App\Http\Controllers\Settings\WebhookController::class, 'update'])->name('webhooks.update');
+    Route::delete('settings/webhooks/{webhook}', [App\Http\Controllers\Settings\WebhookController::class, 'destroy'])->name('webhooks.destroy');
+    Route::post('settings/webhooks/{webhook}/test', [App\Http\Controllers\Settings\WebhookController::class, 'test'])->name('webhooks.test');
 });

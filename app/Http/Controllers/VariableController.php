@@ -6,6 +6,8 @@ use App\Models\App;
 use App\Models\LogEntry;
 use App\Models\Variable;
 use Illuminate\Http\Request;
+use App\Support\Webhooks\WebhookEvents;
+use App\Support\Webhooks\WebhookDispatcher;
 
 class VariableController extends Controller
 {
@@ -48,6 +50,14 @@ class VariableController extends Controller
         if ($app->notificationsEnabled()) {
             $app->notify(new \App\Notifications\VariableCreatedNotification($variable, $request->user()));
         }
+
+        app(WebhookDispatcher::class)->dispatch(
+            WebhookEvents::VARIABLE_CREATED,
+            $app,
+            $environment,
+            $request->user(),
+            ['variable' => $variable],
+        );
 
         toastSuccess("Variable \"{$variable->key}\" created.");
 
@@ -157,6 +167,14 @@ class VariableController extends Controller
         }
 
         if ($imported > 0 || $deleted > 0) {
+            app(WebhookDispatcher::class)->dispatch(
+                WebhookEvents::VARIABLES_IMPORTED,
+                $app,
+                \App\Models\Environment::find($validated['environment_id']),
+                $request->user(),
+                ['imported' => $imported, 'deleted' => $deleted],
+            );
+
             $parts = [];
             if ($imported > 0) {
                 $parts[] = $imported . ' imported';
@@ -222,6 +240,14 @@ class VariableController extends Controller
             }
         }
 
+        app(WebhookDispatcher::class)->dispatch(
+            WebhookEvents::VARIABLE_UPDATED,
+            $app,
+            $variable->environment,
+            $request->user(),
+            ['variable' => $variable],
+        );
+
         toastSuccess("Variable \"{$variable->key}\" updated.");
 
         return back();
@@ -241,7 +267,16 @@ class VariableController extends Controller
             'user_id' => request()->user()->id,
         ]);
 
+        $environment = $variable->environment;
         $variable->delete();
+
+        app(WebhookDispatcher::class)->dispatch(
+            WebhookEvents::VARIABLE_DELETED,
+            $app,
+            $environment,
+            request()->user(),
+            ['variable' => $variable],
+        );
 
         toastSuccess("Variable \"{$variable->key}\" deleted.");
 
@@ -269,6 +304,14 @@ class VariableController extends Controller
             'loggable_id' => $variable->id,
             'user_id' => $request->user()->id,
         ]);
+
+        app(WebhookDispatcher::class)->dispatch(
+            WebhookEvents::VARIABLE_ROLLED_BACK,
+            $app,
+            $variable->environment,
+            $request->user(),
+            ['variable' => $variable],
+        );
 
         toastSuccess("Rolled back \"{$variable->key}\" to a previous version.");
 

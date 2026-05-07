@@ -38,6 +38,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         label: "Global",
         items: [
           { title: "Environments", href: "/settings/environments", icon: null },
+          { title: "Webhooks", href: "/settings/webhooks", icon: null },
         ],
       });
     }

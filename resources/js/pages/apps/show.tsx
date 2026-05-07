@@ -1,5 +1,5 @@
-import { generate as generateAppKey } from "@/actions/App/Http/Controllers/AppKeyController";
-import { preflight as preflightWarnings } from "@/actions/App/Http/Controllers/EnvironmentWarningController";
+import { generate as generateAppKey } from "@/wayfinder/actions/App/Http/Controllers/AppKeyController";
+import { preflight as preflightWarnings } from "@/wayfinder/actions/App/Http/Controllers/EnvironmentWarningController";
 import { AppColor } from "@/colors";
 import { WarningsModal, type Warning } from "@/components/warnings-modal";
 import { javascript } from "@codemirror/lang-javascript";

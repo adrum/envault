@@ -33,6 +33,9 @@ class EnvironmentWarningController extends Controller
             $evaluator->evaluate($environment, $values),
         );
 
-        return response()->json(['warnings' => $warnings]);
+        return response()->json([
+            'warnings' => $warnings,
+            'detected_frameworks' => $evaluator->detectFrameworks($values),
+        ]);
     }
 }

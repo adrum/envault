@@ -1,4 +1,5 @@
 import Heading from "@/components/heading";
+import PasskeysForm from "@/components/passkeys-form";
 import TwoFactorRecoveryCodes from "@/components/two-factor-recovery-codes";
 import TwoFactorSetupModal from "@/components/two-factor-setup-modal";
 import { useTwoFactorAuth } from "@/hooks/use-two-factor-auth";
@@ -148,6 +149,8 @@ export default function Security({
           </Form>
         </div>
       )}
+
+      <PasskeysForm />
 
       {canManageTwoFactor && (
         <div className="space-y-6">

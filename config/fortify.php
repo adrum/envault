@@ -148,6 +148,9 @@ return [
         ...(env('PASSWORD_AUTH_ENABLED', false) ?
         [Features::updatePasswords(), Features::resetPasswords()] : []),
         Features::emailVerification(),
+        Features::passkeys([
+            'confirmPassword' => true,
+        ]),
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,

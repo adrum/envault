@@ -45,6 +45,7 @@
         "@inertiajs/react": "^3.1.1",
         "@inertiajs/vite": "^3.1.1",
         "@laravel/echo-react": "^2.3.3",
+        "@laravel/passkeys": "^0.1.0",
         "@mantine/core": "^8.3.18",
         "@mantine/dates": "^8.3.18",
         "@mantine/hooks": "^8.3.18",

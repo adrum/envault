@@ -23,6 +23,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('user-password.update');
     }
 
+    Route::put('settings/passkey/{passkey}', [SecurityController::class, 'updatePasskey'])
+        ->name('user-passkey.update');
+
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
 
     Route::get('settings/tokens', [App\Http\Controllers\Settings\ApiTokenController::class, 'index'])->name('tokens.index');

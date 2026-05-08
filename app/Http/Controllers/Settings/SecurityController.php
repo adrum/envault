@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Settings;
 
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\Request;
 use Laravel\Fortify\Features;
+use Laravel\Passkeys\Passkey;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\Middleware;
@@ -19,10 +21,10 @@ class SecurityController extends Controller implements HasMiddleware
      */
     public static function middleware(): array
     {
-        return Features::canManageTwoFactorAuthentication()
-            && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword')
-            ? [new Middleware('password.confirm', only: ['edit'])]
-            : [];
+        return Features::hasSecurityFeatures()
+            && (Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword') || Features::optionEnabled(Features::passkeys(), 'confirmPassword'))
+                ? [new Middleware('password.confirm', only: ['edit'])]
+                : [];
     }
 
     /**
@@ -33,6 +35,8 @@ class SecurityController extends Controller implements HasMiddleware
         $props = [
             'canUpdatePassword' => Features::canUpdatePasswords(),
             'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
+            'canManagePasskeys' => Features::canManagePasskeys(),
+            'passkeys' => $request->user()->passkeys()->orderBy('created_at', 'desc')->get(),
         ];
 
         if (Features::canManageTwoFactorAuthentication()) {
@@ -40,6 +44,13 @@ class SecurityController extends Controller implements HasMiddleware
 
             $props['twoFactorEnabled'] = $request->user()->hasEnabledTwoFactorAuthentication();
             $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
+        }
+
+        if (Features::canManagePasskeys()) {
+            $request->ensureStateIsValid();
+
+            $props['passkeysEnabled'] = $request->user()->hasPasskeysEnabled();
+            $props['requiresConfirmation'] = Features::optionEnabled(Features::passkeys(), 'confirm');
         }
 
         return Inertia::render('settings/security', $props);
@@ -55,6 +66,30 @@ class SecurityController extends Controller implements HasMiddleware
         ]);
 
         toastSuccess('Password updated.');
+
+        return back();
+    }
+
+    /**
+     * Update the user's passkey.
+     */
+    public function updatePasskey(Request $request, Passkey $passkey): RedirectResponse
+    {
+        if ($request->user()->id != $passkey->user_id) {
+            toastError(__('Passkey not found.'));
+
+            return back();
+        }
+
+        $request->validate([
+            'name' => ['required', 'min:3', 'max:255'],
+        ]);
+
+        $passkey->update([
+            'name' => $request->name,
+        ]);
+
+        toastSuccess(__('Passkey updated.'));
 
         return back();
     }

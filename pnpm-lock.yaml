@@ -56,6 +56,9 @@ importers:
       '@laravel/echo-react':
         specifier: ^2.3.3
         version: 2.3.3(pusher-js@8.5.0)(react@19.2.6)(socket.io-client@4.8.3)
+      '@laravel/passkeys':
+        specifier: ^0.1.0
+        version: 0.1.0(react@19.2.6)
       '@mantine/core':
         specifier: ^8.3.18
         version: 8.3.18(@mantine/hooks@8.3.18(react@19.2.6))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -449,6 +452,21 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       socket.io-client: '*'
 
+  '@laravel/passkeys@0.1.0':
+    resolution: {integrity: sha512-a5tEuiGDPjR/abDIOYm+Np2ThK3uBHRtDnaL5PdEAxoWcJ+f9lJnnZethNqVr9cBecgQndOvElSyhI06uWHYSA==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      svelte: ^5.0.0
+      vue: ^3.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
+
   '@laravel/vite-plugin-wayfinder@0.1.7':
     resolution: {integrity: sha512-yZYIr1iwuCQ7LFI+GsJk9vacw1HWMp3ZlDlW0pdfz3zXyKeu4US7oH79KmQQ031L0cYaSyaUMo/Ha1D4BosKqw==}
 
@@ -730,6 +748,9 @@ packages:
     resolution: {integrity: sha512-hPt/bgL5cE+Qp+/TPHBqptcAgPzgj46mPcg/16zNUmbQk0j+mOEQV/+Lqu8QRtDV3Ek95Q6FeFITpuhl6OTsAA==}
     cpu: [x64]
     os: [win32]
+
+  '@simplewebauthn/browser@13.3.0':
+    resolution: {integrity: sha512-BE/UWv6FOToAdVk0EokzkqQQDOWtNydYlY6+OrmiZ5SCNmb41VehttboTetUM3T/fr6EAFYVXjz4My2wg230rQ==}
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
@@ -2625,6 +2646,12 @@ snapshots:
       react: 19.2.6
       socket.io-client: 4.8.3
 
+  '@laravel/passkeys@0.1.0(react@19.2.6)':
+    dependencies:
+      '@simplewebauthn/browser': 13.3.0
+    optionalDependencies:
+      react: 19.2.6
+
   '@laravel/vite-plugin-wayfinder@0.1.7': {}
 
   '@lezer/common@1.5.2': {}
@@ -2817,6 +2844,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.60.3':
     optional: true
+
+  '@simplewebauthn/browser@13.3.0': {}
 
   '@socket.io/component-emitter@3.1.2': {}
 

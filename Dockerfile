@@ -49,7 +49,7 @@ COPY routes ./routes
 COPY app ./app
 COPY --from=codegen /app/resources/js/wayfinder ./resources/js/wayfinder
 
-RUN pnpm run build || node -e "import('vite').then(v => v.build()).catch(e => { for (const err of (e?.errors ?? [e])) { console.error('---'); console.error(err.message ?? err); console.error(err.frame ?? ''); console.error(err.loc ?? err.id ?? ''); } process.exit(1); })"
+RUN pnpm run build
 
 # ----- Stage 4: Runtime -----
 FROM dunglas/frankenphp:1-php8.4-alpine AS runtime

@@ -14,6 +14,7 @@ class Webhook extends Model
     protected $casts = [
         'events' => 'array',
         'active' => 'boolean',
+        'all_apps' => 'boolean',
     ];
 
     protected $hidden = ['secret'];
@@ -47,6 +48,10 @@ class Webhook extends Model
 
         if (!in_array($event, $this->events ?? [], true)) {
             return false;
+        }
+
+        if ($this->all_apps) {
+            return true;
         }
 
         foreach ($this->subscriptions as $sub) {

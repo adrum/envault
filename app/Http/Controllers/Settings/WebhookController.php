@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\EnvironmentType;
 use App\Models\WebhookDelivery;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use App\Support\Webhooks\WebhookEvents;
@@ -64,11 +65,12 @@ class WebhookController extends Controller
             'url' => $validated['url'],
             'events' => $validated['events'],
             'active' => $validated['active'] ?? true,
+            'all_apps' => $validated['all_apps'] ?? false,
             'secret' => Str::random(40),
             'created_by' => $request->user()->id,
         ]);
 
-        $this->syncSubscriptions($webhook, $validated['subscriptions']);
+        $this->syncSubscriptions($webhook, $validated['subscriptions'] ?? []);
 
         toastSuccess("Webhook \"{$webhook->name}\" created.");
 
@@ -86,9 +88,10 @@ class WebhookController extends Controller
             'url' => $validated['url'],
             'events' => $validated['events'],
             'active' => $validated['active'] ?? $webhook->active,
+            'all_apps' => $validated['all_apps'] ?? false,
         ]);
 
-        $this->syncSubscriptions($webhook, $validated['subscriptions']);
+        $this->syncSubscriptions($webhook, $validated['subscriptions'] ?? []);
 
         toastSuccess("Webhook \"{$webhook->name}\" updated.");
 
@@ -126,7 +129,11 @@ class WebhookController extends Controller
             'events' => ['required', 'array', 'min:1'],
             'events.*' => ['string', 'in:' . implode(',', WebhookEvents::all())],
             'active' => ['nullable', 'boolean'],
-            'subscriptions' => ['required', 'array', 'min:1'],
+            'all_apps' => ['nullable', 'boolean'],
+            'subscriptions' => [
+                Rule::requiredIf(fn () => !$request->boolean('all_apps')),
+                'array',
+            ],
             'subscriptions.*.type' => ['required', 'in:app,environment,environment_type'],
             'subscriptions.*.id' => ['required', 'integer'],
         ]);
@@ -158,6 +165,7 @@ class WebhookController extends Controller
             'url' => $webhook->url,
             'events' => $webhook->events,
             'active' => $webhook->active,
+            'all_apps' => $webhook->all_apps,
             'created_at' => $webhook->created_at?->toIso8601String(),
             'subscriptions' => $webhook->subscriptions->map(fn ($s) => [
                 'type' => match ($s->subscribable_type) {

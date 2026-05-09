@@ -1,17 +1,17 @@
 <?php
 
-use App\Enums\UserRole;
-use App\Jobs\DispatchWebhookJob;
 use App\Models\App;
+use App\Models\User;
+use App\Enums\UserRole;
+use App\Models\Webhook;
 use App\Models\Environment;
 use App\Models\EnvironmentType;
-use App\Models\User;
-use App\Models\Webhook;
 use App\Models\WebhookDelivery;
-use App\Support\Webhooks\WebhookDispatcher;
-use App\Support\Webhooks\WebhookEvents;
+use App\Jobs\DispatchWebhookJob;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use App\Support\Webhooks\WebhookEvents;
+use App\Support\Webhooks\WebhookDispatcher;
 
 beforeEach(function () {
     $this->owner = User::factory()->create(['role' => UserRole::OWNER]);
@@ -130,6 +130,49 @@ it('matches scope by environment_type subscription', function () {
     Queue::assertPushed(DispatchWebhookJob::class, fn ($job) => $job->webhookId === $webhook->id);
 });
 
+it('matches every app when all_apps is true', function () {
+    Queue::fake();
+
+    $webhook = Webhook::create([
+        'name' => 'all-apps',
+        'url' => 'https://example.com/hook',
+        'events' => [WebhookEvents::VARIABLE_CREATED],
+        'active' => true,
+        'all_apps' => true,
+        'secret' => 'test-secret',
+        'created_by' => $this->owner->id,
+    ]);
+
+    $otherApp = App::create(['name' => 'Other App']);
+    $otherEnv = Environment::where('app_id', $otherApp->id)->first();
+
+    app(WebhookDispatcher::class)->dispatch(
+        WebhookEvents::VARIABLE_CREATED,
+        $otherApp,
+        $otherEnv,
+        $this->owner,
+    );
+
+    Queue::assertPushed(DispatchWebhookJob::class, fn ($job) => $job->webhookId === $webhook->id);
+});
+
+it('creates an all_apps webhook without subscriptions', function () {
+    $this->actingAs($this->owner)
+        ->post('/settings/webhooks', [
+            'name' => 'Global',
+            'url' => 'https://example.com/hook',
+            'events' => [WebhookEvents::VARIABLE_UPDATED],
+            'active' => true,
+            'all_apps' => true,
+            'subscriptions' => [],
+        ])
+        ->assertRedirect('/settings/webhooks');
+
+    $webhook = Webhook::where('name', 'Global')->firstOrFail();
+    expect($webhook->all_apps)->toBeTrue();
+    expect($webhook->subscriptions)->toHaveCount(0);
+});
+
 it('does not dispatch when scope does not match', function () {
     Queue::fake();
 
@@ -242,7 +285,7 @@ it('records a failed delivery and re-throws for retry', function () {
     ]);
 
     expect(fn () => (new DispatchWebhookJob($webhook->id, WebhookEvents::TEST, []))->handle())
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(RuntimeException::class);
 
     $delivery = WebhookDelivery::where('webhook_id', $webhook->id)->first();
     expect($delivery->response_status)->toBe(500);

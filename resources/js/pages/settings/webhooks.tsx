@@ -1,6 +1,10 @@
 import Heading from "@/components/heading";
-import SettingsLayout from "@/layouts/settings/layout";
-import { faPaperPlane, faPencil, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPaperPlane,
+  faPencil,
+  faPlus,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Head, router } from "@inertiajs/react";
 import {
@@ -34,6 +38,7 @@ type Webhook = {
   url: string;
   events: string[];
   active: boolean;
+  all_apps: boolean;
   created_at: string;
   subscriptions: Subscription[];
 };
@@ -53,7 +58,11 @@ type Delivery = {
 };
 
 type ScopeOptions = {
-  apps: { id: number; name: string; environments: { id: number; label: string }[] }[];
+  apps: {
+    id: number;
+    name: string;
+    environments: { id: number; label: string }[];
+  }[];
   environment_types: { id: number; name: string; color: string }[];
 };
 
@@ -87,7 +96,11 @@ export default function WebhooksPage({
   };
 
   const handleTest = (w: Webhook) => {
-    router.post(`/settings/webhooks/${w.id}/test`, {}, { preserveScroll: true });
+    router.post(
+      `/settings/webhooks/${w.id}/test`,
+      {},
+      { preserveScroll: true },
+    );
   };
 
   const handleDelete = () => {
@@ -99,7 +112,7 @@ export default function WebhooksPage({
   };
 
   return (
-    <SettingsLayout>
+    <>
       <Head title="Webhooks" />
       <Heading
         title="Webhooks"
@@ -114,7 +127,10 @@ export default function WebhooksPage({
 
         <Tabs.Panel value="webhooks" pt="md">
           <Group justify="flex-end" mb="sm">
-            <Button leftSection={<FontAwesomeIcon icon={faPlus} />} onClick={openCreate}>
+            <Button
+              leftSection={<FontAwesomeIcon icon={faPlus} />}
+              onClick={openCreate}
+            >
               New webhook
             </Button>
           </Group>
@@ -145,36 +161,52 @@ export default function WebhooksPage({
                         ))}
                       </Group>
                       <Group gap={4}>
-                        {w.subscriptions.map((s) => (
-                          <Badge
-                            key={subKey(s)}
-                            color={
-                              s.type === "app"
-                                ? "blue"
-                                : s.type === "environment"
-                                  ? "violet"
-                                  : "teal"
-                            }
-                            size="sm"
-                          >
-                            {s.label}
+                        {w.all_apps ? (
+                          <Badge color="blue" size="sm">
+                            All apps (current & future)
                           </Badge>
-                        ))}
+                        ) : (
+                          w.subscriptions.map((s) => (
+                            <Badge
+                              key={subKey(s)}
+                              color={
+                                s.type === "app"
+                                  ? "blue"
+                                  : s.type === "environment"
+                                    ? "violet"
+                                    : "teal"
+                              }
+                              size="sm"
+                            >
+                              {s.label}
+                            </Badge>
+                          ))
+                        )}
                       </Group>
                     </Stack>
                     <Group gap="xs">
                       <Tooltip label="Send test event">
-                        <ActionIcon variant="default" onClick={() => handleTest(w)}>
+                        <ActionIcon
+                          variant="default"
+                          onClick={() => handleTest(w)}
+                        >
                           <FontAwesomeIcon icon={faPaperPlane} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Edit">
-                        <ActionIcon variant="default" onClick={() => openEdit(w)}>
+                        <ActionIcon
+                          variant="default"
+                          onClick={() => openEdit(w)}
+                        >
                           <FontAwesomeIcon icon={faPencil} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Delete">
-                        <ActionIcon color="red" variant="light" onClick={() => setDeleteTarget(w)}>
+                        <ActionIcon
+                          color="red"
+                          variant="light"
+                          onClick={() => setDeleteTarget(w)}
+                        >
                           <FontAwesomeIcon icon={faTrash} />
                         </ActionIcon>
                       </Tooltip>
@@ -222,7 +254,9 @@ export default function WebhooksPage({
                         ) : d.success ? (
                           <Badge color="green">{d.response_status}</Badge>
                         ) : (
-                          <Badge color="orange">{d.response_status ?? "—"}</Badge>
+                          <Badge color="orange">
+                            {d.response_status ?? "—"}
+                          </Badge>
                         )}
                       </Table.Td>
                       <Table.Td>{d.attempt}</Table.Td>
@@ -255,7 +289,8 @@ export default function WebhooksPage({
       >
         <Stack>
           <Text size="sm">
-            Delete webhook <strong>{deleteTarget?.name}</strong>? This cannot be undone.
+            Delete webhook <strong>{deleteTarget?.name}</strong>? This cannot be
+            undone.
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setDeleteTarget(null)}>
@@ -267,7 +302,7 @@ export default function WebhooksPage({
           </Group>
         </Stack>
       </Modal>
-    </SettingsLayout>
+    </>
   );
 }
 
@@ -289,6 +324,7 @@ function WebhookFormModal({
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [active, setActive] = useState(true);
+  const [allApps, setAllApps] = useState(false);
   const [events, setEvents] = useState<string[]>([]);
   const [scope, setScope] = useState<Subscription[]>([]);
   const [saving, setSaving] = useState(false);
@@ -299,6 +335,7 @@ function WebhookFormModal({
       setName(webhook?.name ?? "");
       setUrl(webhook?.url ?? "");
       setActive(webhook?.active ?? true);
+      setAllApps(webhook?.all_apps ?? false);
       setEvents(webhook?.events ?? []);
       setScope(
         webhook?.subscriptions.map((s) => ({ type: s.type, id: s.id })) ?? [],
@@ -331,8 +368,11 @@ function WebhookFormModal({
       name,
       url,
       active,
+      all_apps: allApps,
       events,
-      subscriptions: scope.map((s) => ({ type: s.type, id: s.id })),
+      subscriptions: allApps
+        ? []
+        : scope.map((s) => ({ type: s.type, id: s.id })),
     };
     const onError = (errs: Record<string, string>) => {
       setErrors(errs);
@@ -414,51 +454,61 @@ function WebhookFormModal({
             (union).
           </Text>
 
-          <Stack gap="md">
-            <div>
-              <Text size="xs" fw={500} c="dimmed" mb={4}>
-                Environment Types
-              </Text>
-              <Stack gap={2}>
-                {scopeOptions.environment_types.map((t) => (
-                  <Checkbox
-                    key={t.id}
-                    label={t.name}
-                    checked={isSelected("environment_type", t.id)}
-                    onChange={() => toggleScope("environment_type", t.id)}
-                  />
-                ))}
-              </Stack>
-            </div>
+          <Checkbox
+            mb="sm"
+            label="All current and future apps"
+            description="Fire for every app — including apps created later."
+            checked={allApps}
+            onChange={(e) => setAllApps(e.currentTarget.checked)}
+          />
 
-            <div>
-              <Text size="xs" fw={500} c="dimmed" mb={4}>
-                Apps & Environments
-              </Text>
-              <Stack gap={4}>
-                {scopeOptions.apps.map((a) => (
-                  <div key={a.id} className="border-l-2 border-border pl-3">
+          {!allApps && (
+            <Stack gap="md">
+              <div>
+                <Text size="xs" fw={500} c="dimmed" mb={4}>
+                  Environment Types
+                </Text>
+                <Stack gap={2}>
+                  {scopeOptions.environment_types.map((t) => (
                     <Checkbox
-                      label={<strong>{a.name}</strong>}
-                      checked={isSelected("app", a.id)}
-                      onChange={() => toggleScope("app", a.id)}
+                      key={t.id}
+                      label={t.name}
+                      checked={isSelected("environment_type", t.id)}
+                      onChange={() => toggleScope("environment_type", t.id)}
                     />
-                    <Stack gap={2} mt={4} ml="md">
-                      {a.environments.map((env) => (
-                        <Checkbox
-                          key={env.id}
-                          size="sm"
-                          label={env.label}
-                          checked={isSelected("environment", env.id)}
-                          onChange={() => toggleScope("environment", env.id)}
-                        />
-                      ))}
-                    </Stack>
-                  </div>
-                ))}
-              </Stack>
-            </div>
-          </Stack>
+                  ))}
+                </Stack>
+              </div>
+
+              <div>
+                <Text size="xs" fw={500} c="dimmed" mb={4}>
+                  Apps & Environments
+                </Text>
+                <Stack gap={4}>
+                  {scopeOptions.apps.map((a) => (
+                    <div key={a.id} className="border-l-2 border-border pl-3">
+                      <Checkbox
+                        label={<strong>{a.name}</strong>}
+                        checked={isSelected("app", a.id)}
+                        onChange={() => toggleScope("app", a.id)}
+                      />
+                      <Stack gap={2} mt={4} ml="md">
+                        {a.environments.map((env) => (
+                          <Checkbox
+                            key={env.id}
+                            size="sm"
+                            label={env.label}
+                            checked={isSelected("environment", env.id)}
+                            onChange={() => toggleScope("environment", env.id)}
+                          />
+                        ))}
+                      </Stack>
+                    </div>
+                  ))}
+                </Stack>
+              </div>
+            </Stack>
+          )}
 
           {errors.subscriptions && (
             <Text size="xs" c="red" mt={4}>
@@ -479,3 +529,7 @@ function WebhookFormModal({
     </Modal>
   );
 }
+
+WebhooksPage.layout = {
+  breadcrumbs: [{ title: "Webhooks", href: "/settings/webhooks" }],
+};

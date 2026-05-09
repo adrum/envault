@@ -6,9 +6,12 @@ use App\Models\Environment;
 
 class WarningEvaluator
 {
+    public function __construct(public FrameworkDetector $frameworkDetector = new FrameworkDetector) {}
+
     /**
      * Evaluate the configured warning rules against the proposed key/value
-     * map for the given environment.
+     * map for the given environment. Rules scoped to a particular framework
+     * only run when that framework is detected in the values.
      *
      * @param  array<string, string>  $values
      * @return list<Warning>
@@ -17,10 +20,17 @@ class WarningEvaluator
     {
         $rules = config('envault.warnings', []);
         $envIdentifiers = $this->environmentIdentifiers($environment);
+        $detectedFrameworks = $this->frameworkDetector->detect($values);
 
         $warnings = [];
 
         foreach ($rules as $rule) {
+            $framework = $rule['framework'] ?? null;
+
+            if ($framework !== null && !in_array($framework, $detectedFrameworks, true)) {
+                continue;
+            }
+
             $produced = match ($rule['type'] ?? null) {
                 'value_warning' => [$this->evaluateValueWarning($rule, $values, $envIdentifiers)],
                 'unknown_value' => [$this->evaluateUnknownValue($rule, $values)],
@@ -32,12 +42,22 @@ class WarningEvaluator
 
             foreach ($produced as $warning) {
                 if ($warning !== null) {
+                    $warning->framework = $framework;
                     $warnings[] = $warning;
                 }
             }
         }
 
         return $warnings;
+    }
+
+    /**
+     * @param  array<string, string>  $values
+     * @return list<string>
+     */
+    public function detectFrameworks(array $values): array
+    {
+        return $this->frameworkDetector->detect($values);
     }
 
     /**

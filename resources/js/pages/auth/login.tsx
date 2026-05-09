@@ -1,5 +1,6 @@
 import { Form, Head } from "@inertiajs/react";
 
+import PasskeyButton from "@/components/passkey-button";
 import TextLink from "@/components/text-link";
 import { store } from "@/wayfinder/routes/login";
 import { Button, Checkbox, PasswordInput, TextInput } from "@mantine/core";
@@ -39,7 +40,7 @@ export default function Login({
                   withAsterisk={false}
                   autoFocus
                   tabIndex={1}
-                  autoComplete="email"
+                  autoComplete="email webauthn"
                   placeholder="email@example.com"
                 />
               </div>
@@ -96,6 +97,8 @@ export default function Login({
                 Log in
               </Button>
             </div>
+
+            <PasskeyButton />
 
             {canRegister && (
               <div className="text-center text-sm text-muted-foreground">

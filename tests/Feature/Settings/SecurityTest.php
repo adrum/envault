@@ -56,6 +56,10 @@ test('security page does not require password confirmation when disabled', funct
         'confirmPassword' => false,
     ]);
 
+    Features::passkeys([
+        'confirmPassword' => false,
+    ]);
+
     $this->actingAs($user)
         ->get(route('security.edit'))
         ->assertOk()

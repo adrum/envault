@@ -196,6 +196,7 @@ it('warns when APP_KEY is empty', function () {
 it('warns when APP_KEY is missing entirely', function () {
     $values = baseline();
     unset($values['APP_KEY']);
+    $values['APP_ENV'] = 'production';
 
     $response = $this->postJson(preflightUrl($this->testApp->id, $this->production->id), [
         'values' => $values,
@@ -296,6 +297,90 @@ it('generates a fresh APP_KEY', function () {
     $key = $response->json('key');
     expect($key)->toStartWith('base64:');
     expect(strlen($key))->toBeGreaterThan(20);
+});
+
+it('detects laravel from APP_KEY presence', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->local->id), [
+        'values' => baseline(),
+    ])->assertOk();
+
+    expect($response->json('detected_frameworks'))->toContain('laravel');
+});
+
+it('detects dotnet from ASPNETCORE_ENVIRONMENT', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->local->id), [
+        'values' => ['ASPNETCORE_ENVIRONMENT' => 'Development'],
+    ])->assertOk();
+
+    expect($response->json('detected_frameworks'))->toContain('dotnet');
+});
+
+it('detects dotnet from double-underscore keys', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->local->id), [
+        'values' => ['ConnectionStrings__DefaultConnection' => 'Server=...;'],
+    ])->assertOk();
+
+    expect($response->json('detected_frameworks'))->toContain('dotnet');
+});
+
+it('does not run laravel rules when no laravel signals are present', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->production->id), [
+        'values' => [
+            'ASPNETCORE_ENVIRONMENT' => 'Production',
+            'MAIL_MAILER' => 'unknown-driver',
+        ],
+    ])->assertOk();
+
+    expect(warningKeys($response))->not->toContain('MAIL_MAILER');
+});
+
+it('warns on ASPNETCORE_ENVIRONMENT=Development outside local', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->production->id), [
+        'values' => ['ASPNETCORE_ENVIRONMENT' => 'Development'],
+    ])->assertOk();
+
+    expect(warningKeys($response))->toContain('ASPNETCORE_ENVIRONMENT');
+});
+
+it('warns on unknown ASPNETCORE_ENVIRONMENT values', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->local->id), [
+        'values' => ['ASPNETCORE_ENVIRONMENT' => 'Banana'],
+    ])->assertOk();
+
+    expect(warningKeys($response))->toContain('ASPNETCORE_ENVIRONMENT');
+});
+
+it('warns on empty ConnectionStrings__DefaultConnection in production', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->production->id), [
+        'values' => [
+            'ASPNETCORE_ENVIRONMENT' => 'Production',
+            'ConnectionStrings__DefaultConnection' => '',
+        ],
+    ])->assertOk();
+
+    expect(warningKeys($response))->toContain('ConnectionStrings__DefaultConnection');
+});
+
+it('tags warnings with their framework', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->production->id), [
+        'values' => baseline(['APP_DEBUG' => 'true']),
+    ])->assertOk();
+
+    $warning = collect($response->json('warnings'))
+        ->firstWhere(fn ($w) => in_array('APP_DEBUG', $w['keys']));
+
+    expect($warning['framework'])->toBe('laravel');
+});
+
+it('tags generic placeholder warnings with no framework', function () {
+    $response = $this->postJson(preflightUrl($this->testApp->id, $this->local->id), [
+        'values' => baseline(['STRIPE_SECRET' => 'changeme']),
+    ])->assertOk();
+
+    $warning = collect($response->json('warnings'))
+        ->firstWhere(fn ($w) => in_array('STRIPE_SECRET', $w['keys']));
+
+    expect($warning['framework'])->toBeNull();
 });
 
 it('returns 404 when environment does not belong to app', function () {

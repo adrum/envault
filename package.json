@@ -2,6 +2,7 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "packageManager": "pnpm@10.28.2",
     "scripts": {
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
@@ -44,6 +45,7 @@
         "@inertiajs/react": "^3.1.1",
         "@inertiajs/vite": "^3.1.1",
         "@laravel/echo-react": "^2.3.3",
+        "@laravel/passkeys": "^0.1.0",
         "@mantine/core": "^8.3.18",
         "@mantine/dates": "^8.3.18",
         "@mantine/hooks": "^8.3.18",

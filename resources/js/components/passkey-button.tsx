@@ -16,7 +16,7 @@ export default function PasskeyButton() {
   return (
     <>
       {page.props.canUsePasskeys && isSupported && (
-        <>
+        <div className="grid gap-2">
           <Button
             loading={isLoading}
             variant="outline"
@@ -26,7 +26,7 @@ export default function PasskeyButton() {
             Login Using Passkey
           </Button>
           {error && <p className="text-sm text-red-600">{error}</p>}
-        </>
+        </div>
       )}
     </>
   );

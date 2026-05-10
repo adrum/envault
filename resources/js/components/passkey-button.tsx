@@ -25,7 +25,7 @@ export default function PasskeyButton() {
           >
             Login Using Passkey
           </Button>
-          {error && <p className="error">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </>
       )}
     </>

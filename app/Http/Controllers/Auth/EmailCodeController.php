@@ -24,12 +24,14 @@ class EmailCodeController extends Controller
                 'step' => 'code',
                 'email' => $email,
                 'passwordAuthEnabled' => Features::canUpdatePasswords(),
+                'canUsePasskeys' => Features::canManagePasskeys(),
             ]);
         }
 
         return Inertia::render('auth/email-code', [
             'step' => 'email',
             'passwordAuthEnabled' => Features::canUpdatePasswords(),
+            'canUsePasskeys' => Features::canManagePasskeys(),
         ]);
     }
 

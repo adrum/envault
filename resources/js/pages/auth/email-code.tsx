@@ -2,6 +2,7 @@ import TextLink from "@/components/text-link";
 import { Form, Head, router, usePage } from "@inertiajs/react";
 import { Button, Text, TextInput } from "@mantine/core";
 import { SSOLinks } from "./sso-links";
+import PasskeyButton from "@/components/passkey-button";
 
 interface EmailCodeProps {
   step: "email" | "code";
@@ -66,6 +67,9 @@ export default function EmailCode({
               </>
             )}
           </Form>
+
+          <PasskeyButton />
+
           <SSOLinks />
         </>
       )}

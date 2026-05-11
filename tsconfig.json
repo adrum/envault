@@ -1,5 +1,10 @@
 {
   "include": ["resources/js/**/*"],
+  "exclude": [
+    "resources/js/actions",
+    "resources/js/routes",
+    "resources/js/wayfinder"
+  ],
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",

@@ -32,6 +32,8 @@ export default [
       "resources/js/generated.d.ts",
       "resources/js/enums.ts",
       "resources/js/wayfinder",
+      "resources/js/actions",
+      "resources/js/routes",
       "**/node_modules/**/*",
       "**/public/**/*",
       "**/vendor/**/*",

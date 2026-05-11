@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\App;
 use App\Models\LogEntry;
 use App\Models\Variable;
+use App\Support\EnvFile;
 use Illuminate\Http\Request;
 use App\Support\Webhooks\WebhookEvents;
 use App\Support\Webhooks\WebhookDispatcher;
@@ -76,7 +77,7 @@ class VariableController extends Controller
         $validated['environment_id'] = $validated['environment_id']
             ?? $app->environments()->value('environments.id');
 
-        $lines = explode("\n", $validated['env_content']);
+        $entries = EnvFile::parse($validated['env_content']);
         $imported = 0;
         $sortOrder = 0;
         $processedKeys = [];
@@ -86,25 +87,9 @@ class VariableController extends Controller
             ->pluck('key')
             ->all();
 
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line) || str_starts_with($line, '#')) {
-                continue;
-            }
-
-            $parts = explode('=', $line, 2);
-            if (count($parts) !== 2) {
-                continue;
-            }
-
-            $key = trim($parts[0]);
-            $value = trim($parts[1]);
-
-            // Remove surrounding quotes from value
-            if ((str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-                (str_starts_with($value, "'") && str_ends_with($value, "'"))) {
-                $value = substr($value, 1, -1);
-            }
+        foreach ($entries as $entry) {
+            $key = $entry['key'];
+            $value = $entry['value'];
 
             /** @var Variable $variable */
             $variable = $app->variables()->where('environment_id', $validated['environment_id'])->firstOrCreate(
@@ -330,11 +315,12 @@ class VariableController extends Controller
             $variables = $app->variables;
         }
 
-        $env = $variables->map(function (Variable $variable) {
-            $value = $variable->latest_version !== null ? $variable->latest_version->value : '';
-
-            return "{$variable->key}={$value}";
-        })->implode("\n");
+        $env = EnvFile::serialize($variables->map(function (Variable $variable) {
+            return [
+                'key' => $variable->key,
+                'value' => $variable->latest_version !== null ? $variable->latest_version->value : '',
+            ];
+        })->all());
 
         return response($env, 200, [
             'Content-Type' => 'text/plain',

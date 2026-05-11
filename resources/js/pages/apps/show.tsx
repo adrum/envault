@@ -1,7 +1,7 @@
-import { generate as generateAppKey } from "@/wayfinder/actions/App/Http/Controllers/AppKeyController";
-import { preflight as preflightWarnings } from "@/wayfinder/actions/App/Http/Controllers/EnvironmentWarningController";
 import { AppColor } from "@/colors";
 import { WarningsModal, type Warning } from "@/components/warnings-modal";
+import { generate as generateAppKey } from "@/wayfinder/actions/App/Http/Controllers/AppKeyController";
+import { preflight as preflightWarnings } from "@/wayfinder/actions/App/Http/Controllers/EnvironmentWarningController";
 import { javascript } from "@codemirror/lang-javascript";
 import { StreamLanguage } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -37,9 +37,29 @@ import { notifications } from "@mantine/notifications";
 import CodeMirror from "@uiw/react-codemirror";
 import { useEffect, useRef, useState } from "react";
 
-// Simple .env syntax highlighting
-const envLanguage = StreamLanguage.define({
-  token(stream) {
+// Simple .env syntax highlighting. A boolean flag tracks whether we are inside
+// a multiline quoted value so PEM keys and similar payloads stay coloured.
+type EnvLangState = { inString: false } | { inString: true; quote: '"' | "'" };
+const envLanguage = StreamLanguage.define<EnvLangState>({
+  startState: () => ({ inString: false }),
+  token(stream, state) {
+    if (state.inString) {
+      const quote = state.quote;
+      while (!stream.eol()) {
+        if (quote === '"' && stream.peek() === "\\") {
+          stream.next();
+          if (!stream.eol()) stream.next();
+          continue;
+        }
+        if (stream.peek() === quote) {
+          stream.next();
+          (state as EnvLangState as { inString: boolean }).inString = false;
+          return "string";
+        }
+        stream.next();
+      }
+      return "string";
+    }
     if (stream.sol() && stream.match(/^#.*/)) {
       return "comment";
     }
@@ -53,16 +73,114 @@ const envLanguage = StreamLanguage.define({
     if (stream.eat("=")) {
       return "operator";
     }
-    if (stream.match(/^"[^"]*"/)) {
-      return "string";
-    }
-    if (stream.match(/^'[^']*'/)) {
+    const ch = stream.peek();
+    if (ch === '"' || ch === "'") {
+      stream.next();
+      (
+        state as EnvLangState as { inString: boolean; quote: '"' | "'" }
+      ).inString = true;
+      (state as EnvLangState as { inString: boolean; quote: '"' | "'" }).quote =
+        ch;
       return "string";
     }
     stream.next();
     return null;
   },
 });
+
+// Parse a .env-formatted string. Mirrors App\Support\EnvFile::parse on the
+// backend so the frontend bulk editor and the import endpoint behave identically.
+type EnvEntry = { key: string; value: string };
+const parseEnvFile = (content: string): EnvEntry[] => {
+  const out: EnvEntry[] = [];
+  const len = content.length;
+  let i = 0;
+  const advancePastNewline = (idx: number): number => {
+    if (idx < len && content[idx] === "\r") idx++;
+    if (idx < len && content[idx] === "\n") idx++;
+    return idx;
+  };
+  while (i < len) {
+    while (i < len && (content[i] === " " || content[i] === "\t")) i++;
+    if (i >= len || content[i] === "\n" || content[i] === "\r") {
+      i = advancePastNewline(i);
+      continue;
+    }
+    if (content[i] === "#") {
+      while (i < len && content[i] !== "\n") i++;
+      i = advancePastNewline(i);
+      continue;
+    }
+    const keyStart = i;
+    while (i < len && content[i] !== "=" && content[i] !== "\n") i++;
+    if (i >= len || content[i] !== "=") {
+      i = advancePastNewline(i);
+      continue;
+    }
+    const key = content.substring(keyStart, i).replace(/[ \t]+$/, "");
+    i++; // skip '='
+    while (i < len && (content[i] === " " || content[i] === "\t")) i++;
+    let value = "";
+    if (i < len && (content[i] === '"' || content[i] === "'")) {
+      const quote = content[i];
+      i++;
+      let buf = "";
+      while (i < len) {
+        const ch = content[i];
+        if (quote === '"' && ch === "\\" && i + 1 < len) {
+          const next = content[i + 1];
+          buf +=
+            next === "n"
+              ? "\n"
+              : next === "r"
+                ? "\r"
+                : next === "t"
+                  ? "\t"
+                  : next === "\\"
+                    ? "\\"
+                    : next === '"'
+                      ? '"'
+                      : "\\" + next;
+          i += 2;
+          continue;
+        }
+        if (ch === quote) {
+          i++;
+          break;
+        }
+        buf += ch;
+        i++;
+      }
+      value = buf;
+      while (i < len && content[i] !== "\n") i++;
+    } else {
+      const valueStart = i;
+      while (i < len && content[i] !== "\n") i++;
+      value = content.substring(valueStart, i).trim();
+    }
+    i = advancePastNewline(i);
+    if (key === "") continue;
+    out.push({ key, value });
+  }
+  return out;
+};
+
+// Render a value back to its .env representation. Wraps any value containing
+// a newline, quote, comment marker, leading/trailing whitespace, or backslash
+// in double quotes (with `\\` and `\"` escaped).
+const formatEnvValue = (value: string): string => {
+  if (value === "") return "";
+  const needsQuotes = /[\n"'#=\\]/.test(value) || value !== value.trim();
+  if (!needsQuotes) return value;
+  const escaped = value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, "\\r");
+  return `"${escaped}"`;
+};
+
+const serializeEnvFile = (entries: EnvEntry[]): string =>
+  entries.map((e) => `${e.key}=${formatEnvValue(e.value)}`).join("\n");
 
 // Coerce a string env value to a JSON-friendly type for nicer appsettings.json output.
 const coerceJsonValue = (raw: string): string | number | boolean | null => {
@@ -82,13 +200,7 @@ const coerceJsonValue = (raw: string): string | number | boolean | null => {
 // into a nested JSON string. Numeric path segments produce arrays.
 const envToNestedJson = (env: string): string => {
   const root: Record<string, unknown> = {};
-  for (const rawLine of env.split("\n")) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
-    if (eq < 0) continue;
-    const key = line.substring(0, eq).trim();
-    const value = rawLine.substring(rawLine.indexOf("=") + 1);
+  for (const { key, value } of parseEnvFile(env)) {
     const parts = key.split("__");
     let cursor: Record<string | number, unknown> = root as Record<
       string | number,
@@ -127,7 +239,7 @@ const nestedJsonToEnv = (json: string): string => {
   };
   const walk = (node: unknown, path: string[]): void => {
     if (node === null || typeof node !== "object") {
-      lines.push(`${path.join("__")}=${formatScalar(node)}`);
+      lines.push(`${path.join("__")}=${formatEnvValue(formatScalar(node))}`);
       return;
     }
     if (Array.isArray(node)) {
@@ -270,9 +382,12 @@ export default function AppShow({
   useWindowEvent("keyup", (e) => setAltPressed(e.altKey));
   useWindowEvent("blur", () => setAltPressed(false));
 
-  const envText = (currentEnv?.variables ?? [])
-    .map((v) => `${v.key}=${v.latest_version?.value ?? ""}`)
-    .join("\n");
+  const envText = serializeEnvFile(
+    (currentEnv?.variables ?? []).map((v) => ({
+      key: v.key,
+      value: v.latest_version?.value ?? "",
+    })),
+  );
   const looksNested =
     jsonModeEnabled &&
     keysLookNested((currentEnv?.variables ?? []).map((v) => v.key));
@@ -350,19 +465,7 @@ export default function AppShow({
 
   const parseEnvToMap = (env: string): Record<string, string> => {
     const map: Record<string, string> = {};
-    for (const rawLine of env.split("\n")) {
-      const line = rawLine.trim();
-      if (!line || line.startsWith("#")) continue;
-      const eq = line.indexOf("=");
-      if (eq < 0) continue;
-      const key = line.substring(0, eq).trim();
-      let value = rawLine.substring(rawLine.indexOf("=") + 1);
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
+    for (const { key, value } of parseEnvFile(env)) {
       map[key] = value;
     }
     return map;
@@ -555,8 +658,8 @@ export default function AppShow({
 
   const openBulkEdit = () => {
     const envVariables = currentEnv?.variables ?? [];
-    const lines = envVariables.map(
-      (v) => `${v.key}=${v.latest_version?.value ?? ""}`,
+    const lines = envVariables.map((v) =>
+      serializeEnvFile([{ key: v.key, value: v.latest_version?.value ?? "" }]),
     );
 
     // Group by prefix (everything before the first underscore)
@@ -937,15 +1040,23 @@ export default function AppShow({
                   variant="filled"
                 />
               </div>
-              <div className="flex items-center gap-4 py-5">
-                <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
+              <div className="flex items-start gap-4 py-5">
+                <label className="mt-2 w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
                   Value
                 </label>
-                <TextInput
+                <Textarea
                   value={selectedVariable.latest_version?.value ?? ""}
                   readOnly
                   className="flex-1"
                   variant="filled"
+                  autosize
+                  minRows={1}
+                  maxRows={20}
+                  styles={{
+                    input: {
+                      fontFamily: "var(--mantine-font-family-monospace)",
+                    },
+                  }}
                 />
               </div>
             </div>
@@ -979,15 +1090,23 @@ export default function AppShow({
                   className="flex-1"
                 />
               </div>
-              <div className="flex items-center gap-4 py-5">
-                <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
+              <div className="flex items-start gap-4 py-5">
+                <label className="mt-2 w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
                   Value
                 </label>
-                <div className="flex flex-1 items-center gap-2">
-                  <TextInput
+                <div className="flex flex-1 items-start gap-2">
+                  <Textarea
                     value={editValue}
                     onChange={(e) => setEditValue(e.currentTarget.value)}
                     className="flex-1"
+                    autosize
+                    minRows={1}
+                    maxRows={20}
+                    styles={{
+                      input: {
+                        fontFamily: "var(--mantine-font-family-monospace)",
+                      },
+                    }}
                   />
                   {selectedVariable.versions.length > 1 && (
                     <ActionIcon

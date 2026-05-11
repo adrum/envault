@@ -66,6 +66,51 @@ test('can import variable with excess whitespace', function () {
     ]);
 });
 
+test('can import variable with double-quoted multiline value', function () {
+    $app = App::factory()->create();
+    $environmentId = $app->environments()->value('environments.id');
+    $pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAKj==\n-----END RSA PRIVATE KEY-----";
+
+    $this->post(route('variables.import', $app), [
+        'env_content' => "PASSPORT_PRIVATE_KEY=\"{$pem}\"\nFOLLOWUP=ok",
+        'environment_id' => $environmentId,
+    ])->assertRedirect();
+
+    $variable = Variable::where('app_id', $app->id)->where('key', 'PASSPORT_PRIVATE_KEY')->first();
+    expect($variable->latest_version->value)->toEqual($pem);
+    expect(Variable::where('app_id', $app->id)->where('key', 'FOLLOWUP')->first()->latest_version->value)
+        ->toEqual('ok');
+});
+
+test('can import variable with single-quoted multiline value', function () {
+    $app = App::factory()->create();
+    $pem = "-----BEGIN PUBLIC KEY-----\nABC\n-----END PUBLIC KEY-----";
+
+    $this->post(route('variables.import', $app), [
+        'env_content' => "PASSPORT_PUBLIC_KEY='{$pem}'",
+    ])->assertRedirect();
+
+    expect(Variable::where('app_id', $app->id)->where('key', 'PASSPORT_PUBLIC_KEY')->first()->latest_version->value)
+        ->toEqual($pem);
+});
+
+test('export round-trips a multiline value', function () {
+    $app = App::factory()->create();
+    $environmentId = $app->environments()->value('environments.id');
+    $pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIB\n-----END RSA PRIVATE KEY-----";
+
+    $this->post(route('variables.import', $app), [
+        'env_content' => "KEY=\"{$pem}\"",
+        'environment_id' => $environmentId,
+    ])->assertRedirect();
+
+    $exported = $this->get(route('variables.export', ['app' => $app, 'environment' => $environmentId]))
+        ->getContent();
+
+    $reparsed = \App\Support\EnvFile::parse($exported);
+    expect($reparsed)->toEqual([['key' => 'KEY', 'value' => $pem]]);
+});
+
 test('import removes variables that are not in the content', function () {
     $app = App::factory()->create();
     $environmentId = $app->environments()->value('environments.id');

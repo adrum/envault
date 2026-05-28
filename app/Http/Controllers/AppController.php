@@ -21,7 +21,8 @@ class AppController extends Controller
         }
 
         if ($search) {
-            $query->where('name', 'like', "%{$search}%");
+            $operator = $query->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+            $query->where('name', $operator, "%{$search}%");
         }
 
         $environmentFilter = $request->get('environment_type');

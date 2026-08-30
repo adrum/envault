@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use Inertia\Middleware;
 use Illuminate\Http\Request;
 use Laravel\Fortify\Features;
+use App\Support\OidcConnections;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -59,6 +60,7 @@ class HandleInertiaRequests extends Middleware
                     'label' => config('services.laravelpassport.label'),
                     'logo' => config('services.laravelpassport.logo'),
                 ] : false,
+                'oidcSso' => OidcConnections::forDisplay(),
                 'jsonMode' => Inertia::once(fn () => (bool) config('envault.features.json_mode')),
             ],
             'impersonating' => $request->session()->has('impersonator_id'),

@@ -22,6 +22,7 @@
         "monicahq/laravel-cloudflare": "^4.0",
         "sentry/sentry-laravel": "^4.22",
         "socialiteproviders/laravelpassport": "^4.3",
+        "socialiteproviders/openidconnect": "^1.0",
         "spatie/laravel-data": "^4.20",
         "spatie/laravel-typescript-transformer": "^2.6",
         "symfony/http-client": "^8.0",

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
 use App\Enums\UserRole;
+use App\Support\OidcConnections;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -11,6 +12,13 @@ class SocialiteCallbackController
 {
     public function __invoke(string $driver)
     {
+        // OIDC connections are mirrored into services.* by the provider package,
+        // but must only ever be completed by OidcCallbackController; this flow is
+        // stateless and would skip their state, nonce and PKCE checks.
+        abort_if(OidcConnections::isOidcDriver($driver), 404);
+
+        abort_unless(filled(config("services.{$driver}.client_id")), 404);
+
         /** @phpstan-ignore-next-line */
         $social = Socialite::driver($driver)->stateless()->user();
 

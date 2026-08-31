@@ -1,13 +1,24 @@
 import { AppColor } from "@/colors";
 import {
+  faArrowDownWideShort,
   faArrowRight,
+  faArrowUpShortWide,
   faBoxesStacked,
   faChevronRight,
   faMagnifyingGlass,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Head, Link, router, usePage } from "@inertiajs/react";
-import { Badge, Button, Group, Select, Text, TextInput } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Group,
+  Select,
+  Text,
+  TextInput,
+  Tooltip,
+} from "@mantine/core";
 import { useState } from "react";
 
 type Environment = {
@@ -40,20 +51,33 @@ type EnvironmentTypeOption = {
   color: string;
 };
 
+const SORT_OPTIONS = [
+  { value: "name", label: "Name" },
+  { value: "variables_count", label: "Variables" },
+  { value: "created_at", label: "Date created" },
+  { value: "updated_at", label: "Last updated" },
+];
+
 export default function AppsIndex({
   apps,
   search: initialSearch,
   environment_type: initialEnvType,
   environmentTypes = [],
+  sort: initialSort,
+  direction: initialDirection,
 }: {
   apps: PaginatedApps;
   search: string;
   environment_type?: string;
   environmentTypes: EnvironmentTypeOption[];
+  sort?: string;
+  direction?: string;
 }) {
   const { can } = usePage().props as any;
   const [search, setSearch] = useState(initialSearch || "");
   const [envTypeFilter, setEnvTypeFilter] = useState(initialEnvType || "");
+  const [sort, setSort] = useState(initialSort || "name");
+  const [direction, setDirection] = useState(initialDirection || "asc");
   const [newAppName, setNewAppName] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -61,6 +85,8 @@ export default function AppsIndex({
     const params = {
       search: search || undefined,
       environment_type: envTypeFilter || undefined,
+      sort: sort || undefined,
+      direction: direction || undefined,
       ...overrides,
     };
     // Remove empty values
@@ -78,6 +104,18 @@ export default function AppsIndex({
   const handleEnvFilter = (value: string | null) => {
     setEnvTypeFilter(value || "");
     applyFilters({ environment_type: value || undefined });
+  };
+
+  const handleSort = (value: string | null) => {
+    const next = value || "name";
+    setSort(next);
+    applyFilters({ sort: next });
+  };
+
+  const toggleDirection = () => {
+    const next = direction === "asc" ? "desc" : "asc";
+    setDirection(next);
+    applyFilters({ direction: next });
   };
 
   const handleCreate = (e: React.FormEvent) => {
@@ -119,6 +157,37 @@ export default function AppsIndex({
                 w={180}
               />
             )}
+            <Select
+              data={SORT_OPTIONS}
+              value={sort}
+              onChange={handleSort}
+              allowDeselect={false}
+              size="sm"
+              w={160}
+              aria-label="Sort by"
+            />
+            <Tooltip
+              label={direction === "asc" ? "Ascending" : "Descending"}
+              withArrow
+            >
+              <ActionIcon
+                variant="default"
+                size="lg"
+                onClick={toggleDirection}
+                aria-label={`Sort direction: ${
+                  direction === "asc" ? "ascending" : "descending"
+                }`}
+              >
+                <FontAwesomeIcon
+                  icon={
+                    direction === "asc"
+                      ? faArrowUpShortWide
+                      : faArrowDownWideShort
+                  }
+                  className="size-4"
+                />
+              </ActionIcon>
+            </Tooltip>
             <TextInput
               placeholder="Search..."
               leftSection={

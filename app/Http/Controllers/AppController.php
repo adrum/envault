@@ -30,7 +30,16 @@ class AppController extends Controller
             $query->whereHas('environments', fn ($q) => $q->where('environment_type_id', $environmentFilter));
         }
 
-        $apps = $query->with('environments')->withCount('variables')->paginate(10)->withQueryString();
+        $sortableColumns = ['name', 'created_at', 'updated_at', 'variables_count'];
+        $sort = in_array($request->get('sort'), $sortableColumns, true) ? $request->get('sort') : 'name';
+        $direction = $request->get('direction') === 'desc' ? 'desc' : 'asc';
+
+        $apps = $query
+            ->with('environments')
+            ->withCount('variables')
+            ->orderBy($sort, $direction)
+            ->paginate(10)
+            ->withQueryString();
 
         $environmentTypes = \App\Models\EnvironmentType::orderBy('sort_order')->get(['id', 'name', 'color']);
 
@@ -39,6 +48,8 @@ class AppController extends Controller
             'search' => $search,
             'environment_type' => $environmentFilter,
             'environmentTypes' => $environmentTypes,
+            'sort' => $sort,
+            'direction' => $direction,
         ]);
     }
 

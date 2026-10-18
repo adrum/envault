@@ -77,6 +77,12 @@ RUN apk add --no-cache \
         sodium \
         zip
 
+# mysqlnd waits 24h by default for a reply, so a dead connection (dropped by
+# the server or the network without a reset) pins a PHP thread for a day.
+# 30s matches max_execution_time; the read then fails with "2006 MySQL server
+# has gone away", which Laravel treats as a lost connection and reconnects.
+RUN echo "mysqlnd.net_read_timeout = 30" > "$PHP_INI_DIR/conf.d/zz-mysqlnd.ini"
+
 WORKDIR /app
 
 RUN cat > /usr/local/bin/docker-entrypoint <<'EOF'

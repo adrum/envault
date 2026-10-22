@@ -33,6 +33,9 @@ jobs:
       - name: Configure directory permissions
         run: chmod -R 777 storage bootstrap/cache
 
+      - name: Static analysis (PHPStan)
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
       - name: Create database
         run: |
           mkdir -p database
@@ -53,7 +56,7 @@ jobs:
       - name: Generate Wayfinder + TypeScript definitions
         run: composer run type-gen
 
-      - name: Run frontend tests (tsc + lint)
+      - name: Run frontend tests (tsc + lint + vitest)
         run: pnpm run test
 
       - name: Execute tests

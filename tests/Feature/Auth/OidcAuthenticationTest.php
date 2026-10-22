@@ -2,6 +2,10 @@
 
 use App\Models\User;
 use App\Enums\UserRole;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Handler\MockHandler;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
@@ -161,6 +165,43 @@ test('oidc drivers cannot be completed through the stateless socialite routes', 
 
     $this->get('/login/oidc_sso')->assertNotFound();
     $this->get('/login/oidc_sso/callback')->assertNotFound();
+});
+
+test('starting a sign in redirects to the authorization endpoint from discovery', function () {
+    // Runs the real provider against a mocked issuer, so discovery and the
+    // authorization request go through the actual Guzzle and PSR-7 stack.
+    $history = [];
+    $stack = HandlerStack::create(new MockHandler([
+        new Response(200, ['Content-Type' => 'application/json'], json_encode([
+            'issuer' => 'https://id.example.com',
+            'authorization_endpoint' => 'https://id.example.com/authorize',
+            'token_endpoint' => 'https://id.example.com/token',
+            'userinfo_endpoint' => 'https://id.example.com/userinfo',
+            'jwks_uri' => 'https://id.example.com/jwks',
+        ])),
+    ]));
+    $stack->push(Middleware::history($history));
+
+    // Handed to the provider through the connection's guzzle options, so the
+    // driver is still built inside the request and picks up its session.
+    config(['services.oidc_sso.guzzle' => ['handler' => $stack]]);
+
+    // Drivers are registered once, when the app boots, from the config of the
+    // time; re-run that registration now the test has configured a connection.
+    event(app(SocialiteProviders\Manager\SocialiteWasCalled::class));
+
+    $response = $this->get(route('login.oidc.start', ['connection' => 'sso']));
+
+    $location = (string) $response->headers->get('Location');
+    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+    expect((string) $history[0]['request']->getUri())->toBe('https://id.example.com/.well-known/openid-configuration')
+        ->and(strtok($location, '?'))->toBe('https://id.example.com/authorize')
+        ->and($query['client_id'])->toBe('envault')
+        ->and($query['response_type'])->toBe('code')
+        ->and(explode(' ', $query['scope']))->toContain('openid')
+        ->and($query['code_challenge_method'])->toBe('S256')
+        ->and($query)->toHaveKeys(['state', 'nonce', 'code_challenge']);
 });
 
 test('unconfigured connections are not routable', function () {

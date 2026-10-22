@@ -57,8 +57,8 @@ importers:
         specifier: ^2.3.3
         version: 2.3.3(pusher-js@8.5.0)(react@19.2.6)(socket.io-client@4.8.3)
       '@laravel/passkeys':
-        specifier: ^0.1.0
-        version: 0.1.0(react@19.2.6)
+        specifier: ^0.2.0
+        version: 0.2.0(react@19.2.6)
       '@mantine/core':
         specifier: ^8.3.18
         version: 8.3.18(@mantine/hooks@8.3.18(react@19.2.6))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -458,8 +458,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       socket.io-client: '*'
 
-  '@laravel/passkeys@0.1.0':
-    resolution: {integrity: sha512-a5tEuiGDPjR/abDIOYm+Np2ThK3uBHRtDnaL5PdEAxoWcJ+f9lJnnZethNqVr9cBecgQndOvElSyhI06uWHYSA==}
+  '@laravel/passkeys@0.2.0':
+    resolution: {integrity: sha512-K+owv26weKrYaoTJutqU40UsJZpwYkqB9jdlz5Bv/C54nxj2+Py9jbVwxASWg21fLsPhn3ngPKZE5RnfakCQKg==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -2700,7 +2700,7 @@ snapshots:
       react: 19.2.6
       socket.io-client: 4.8.3
 
-  '@laravel/passkeys@0.1.0(react@19.2.6)':
+  '@laravel/passkeys@0.2.0(react@19.2.6)':
     dependencies:
       '@simplewebauthn/browser': 13.3.0
     optionalDependencies:

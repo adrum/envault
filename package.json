@@ -13,7 +13,7 @@
         "types": "tsc --noEmit",
         "lint:fix": "npm run lint -- --fix --quiet || exit 0",
         "test:unit": "vitest run",
-    "test": "tsc && npm run lint && npm run test:unit",
+        "test": "tsc && npm run lint && npm run test:unit",
         "preinstall": "npx -y only-allow pnpm"
     },
     "devDependencies": {
@@ -47,7 +47,7 @@
         "@inertiajs/react": "^3.1.1",
         "@inertiajs/vite": "^3.1.1",
         "@laravel/echo-react": "^2.3.3",
-        "@laravel/passkeys": "^0.1.0",
+        "@laravel/passkeys": "^0.2.0",
         "@mantine/core": "^8.3.18",
         "@mantine/dates": "^8.3.18",
         "@mantine/hooks": "^8.3.18",

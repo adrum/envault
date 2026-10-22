@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
-use Illuminate\Auth\SessionGuard;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
@@ -16,13 +15,7 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         try {
-            $guard = Auth::guard('web');
-            // Check if guard has logoutCurrentDevice method
-            if ($guard instanceof SessionGuard) {
-                $guard->logoutCurrentDevice();
-            } else {
-                $guard->logout();
-            }
+            Auth::guard('web')->logoutCurrentDevice();
         } catch (\Exception $e) {
             auth()->logout();
         }

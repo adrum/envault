@@ -61,3 +61,27 @@ test('falls back to name sort for an invalid sort column', function () {
             ->where('sort', 'name')
             ->where('apps.data.0.name', 'Alpha'));
 });
+
+test('admins search all apps case-insensitively', function () {
+    App::factory()->create(['name' => 'Billing Service']);
+    App::factory()->create(['name' => 'Search Indexer']);
+
+    $this->get(route('apps.index', ['search' => 'billing']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('apps.data', 1)
+            ->where('apps.data.0.name', 'Billing Service'));
+});
+
+test('collaborators only search the apps they collaborate on', function () {
+    $collaborator = User::factory()->state(['role' => 'user'])->create();
+
+    $shared = App::factory()->create(['name' => 'Billing Service']);
+    App::factory()->create(['name' => 'Billing Reports']);
+    $shared->collaborators()->attach($collaborator);
+
+    $this->actingAs($collaborator)
+        ->get(route('apps.index', ['search' => 'BILLING']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('apps.data', 1)
+            ->where('apps.data.0.name', 'Billing Service'));
+});

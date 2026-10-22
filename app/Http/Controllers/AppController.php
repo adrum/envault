@@ -21,7 +21,7 @@ class AppController extends Controller
         }
 
         if ($search) {
-            $operator = $query->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+            $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
             $query->where('name', $operator, "%{$search}%");
         }
 

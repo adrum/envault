@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/tmp/composer-cache \
     --optimize-autoloader
 
 # ----- Stage 2: Generate wayfinder + typescript artifacts -----
-FROM dunglas/frankenphp:1.13.2-php8.4.27-alpine AS codegen
+FROM dunglas/frankenphp:1.13.4-php8.4-alpine@sha256:3a08d1149de6ae3df14058c6059ce5dbce0b64263c692b83f071b56a2df31d7b AS codegen
 WORKDIR /app
 
 RUN install-php-extensions bcmath intl pcntl pdo_mysql pdo_pgsql redis sodium zip
@@ -52,7 +52,7 @@ COPY --from=codegen /app/resources/js/wayfinder ./resources/js/wayfinder
 RUN pnpm run build
 
 # ----- Stage 4: Runtime -----
-FROM dunglas/frankenphp:1.13.2-php8.4.27-alpine AS runtime
+FROM dunglas/frankenphp:1.13.4-php8.4-alpine@sha256:3a08d1149de6ae3df14058c6059ce5dbce0b64263c692b83f071b56a2df31d7b AS runtime
 
 ENV SERVER_NAME=:80 \
     APP_ENV=production \

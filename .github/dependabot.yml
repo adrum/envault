@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  # The production image is built from a FrankenPHP base pinned by tag and
+  # digest. Dependabot proposes newer FrankenPHP releases through the tag, and
+  # a fresh digest when the same tag is rebuilt for a PHP patch release or an
+  # Alpine security fix, which is how PHP security releases reach the image.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: daily
+    labels:
+      - dependencies
+      - docker
+    ignore:
+      # node:22-alpine only builds the frontend assets and is not shipped. Its
+      # tag carries just the major version, so the only possible updates are
+      # major Node upgrades, which should be a deliberate change.
+      - dependency-name: node
+        update-types:
+          - version-update:semver-major

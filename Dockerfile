@@ -83,6 +83,10 @@ RUN apk add --no-cache \
 # has gone away", which Laravel treats as a lost connection and reconnects.
 RUN echo "mysqlnd.net_read_timeout = 30" > "$PHP_INI_DIR/conf.d/zz-mysqlnd.ini"
 
+# Stop advertising the exact PHP version in an X-Powered-By header on every
+# response, which tells scanners which known vulnerabilities to try.
+RUN echo "expose_php = Off" > "$PHP_INI_DIR/conf.d/zz-expose-php.ini"
+
 WORKDIR /app
 
 RUN cat > /usr/local/bin/docker-entrypoint <<'EOF'

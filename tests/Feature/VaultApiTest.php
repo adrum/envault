@@ -75,6 +75,23 @@ it('reads secrets for an app environment', function () {
         ->assertJsonPath('data.data.DB_HOST', 'localhost');
 });
 
+it('leaves commented-out variables out of secrets', function () {
+    $app = App::create(['name' => 'Test App']);
+    $env = \App\Models\Environment::where('app_id', $app->id)->first();
+    $active = $env->variables()->create(['app_id' => $app->id, 'key' => 'DB_HOST', 'sort_order' => 0]);
+    $active->versions()->create(['value' => 'live']);
+    $duplicate = $env->variables()->create(['app_id' => $app->id, 'key' => 'DB_HOST', 'sort_order' => 1, 'is_commented' => true]);
+    $duplicate->versions()->create(['value' => 'local']);
+    $disabled = $env->variables()->create(['app_id' => $app->id, 'key' => 'DB_PORT', 'sort_order' => 2, 'is_commented' => true]);
+    $disabled->versions()->create(['value' => '3306']);
+
+    $this->getJson('/api/v1/secret/data/' . $app->slug . '/default', [
+        'X-Vault-Token' => $this->token,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.data', ['DB_HOST' => 'live']);
+});
+
 it('expands ${VAR} references against sibling variables', function () {
     $app = App::create(['name' => 'Test App']);
     $env = \App\Models\Environment::where('app_id', $app->id)->first();

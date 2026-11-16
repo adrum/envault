@@ -27,7 +27,7 @@ class VariableController extends Controller
 
         // Check key uniqueness within environment
         $environment = \App\Models\Environment::findOrFail($validated['environment_id']);
-        if ($environment->variables()->where('key', $validated['key'])->exists()) {
+        if ($environment->variables()->where('key', $validated['key'])->where('is_commented', false)->exists()) {
             return back()->withErrors(['key' => 'This variable key already exists in this environment.']);
         }
 
@@ -78,56 +78,69 @@ class VariableController extends Controller
             ?? $app->environments()->value('environments.id');
 
         $entries = EnvFile::parse($validated['env_content']);
+
+        $duplicateKeys = EnvFile::duplicateActiveKeys($entries);
+        if ($duplicateKeys !== []) {
+            return back()->withErrors([
+                'env_content' => 'These keys are set more than once: ' . implode(', ', $duplicateKeys) . '. Comment out or remove the extra lines.',
+            ]);
+        }
+
+        $existing = $app->variables()->where('environment_id', $validated['environment_id'])->get();
+        $currentValues = $existing->mapWithKeys(fn (Variable $variable): array => [
+            $variable->id => $variable->latest_version?->value,
+        ])->all();
+        $matches = $this->matchEntriesToVariables($entries, $existing, $currentValues);
+
         $imported = 0;
-        $sortOrder = 0;
-        $processedKeys = [];
-        $originalOrder = $app->variables()
-            ->where('environment_id', $validated['environment_id'])
-            ->orderBy('sort_order')
-            ->pluck('key')
-            ->all();
+        $processedIds = [];
 
-        foreach ($entries as $entry) {
-            $key = $entry['key'];
-            $value = $entry['value'];
+        foreach ($entries as $index => $entry) {
+            $variable = $matches[$index] ?? null;
+            $changed = false;
 
-            /** @var Variable $variable */
-            $variable = $app->variables()->where('environment_id', $validated['environment_id'])->firstOrCreate(
-                ['key' => $key],
-                ['environment_id' => $validated['environment_id']],
-            );
-            $variable->update(['sort_order' => $sortOrder]);
+            if ($variable === null) {
+                /** @var Variable $variable */
+                $variable = $app->variables()->create([
+                    'key' => $entry['key'],
+                    'environment_id' => $validated['environment_id'],
+                    'is_commented' => $entry['commented'],
+                    'sort_order' => $index,
+                ]);
+            } else {
+                $changed = $variable->is_commented !== $entry['commented'];
+                $variable->update(['sort_order' => $index, 'is_commented' => $entry['commented']]);
+            }
 
             // Only create a new version if the value actually changed
-            $currentValue = $variable->latest_version?->value;
-            if ($currentValue !== $value) {
-                $variable->versions()->create(['value' => $value, 'user_id' => $request->user()->id]);
+            if (($currentValues[$variable->id] ?? null) !== $entry['value']) {
+                $variable->versions()->create(['value' => $entry['value'], 'user_id' => $request->user()->id]);
+                $changed = true;
+            }
+
+            if ($changed) {
                 $imported++;
             }
 
-            $processedKeys[] = $key;
-            $sortOrder++;
+            $processedIds[] = $variable->id;
         }
 
         // Any existing variables not in the import are removed
-        $deleted = 0;
-        $app->variables()
-            ->where('environment_id', $validated['environment_id'])
-            ->whereNotIn('key', $processedKeys)
-            ->each(function ($variable) use ($app, $request, &$deleted, &$originalOrder) {
-                $originalOrder = array_values(array_filter($originalOrder, fn ($k) => $k !== $variable->key));
-                LogEntry::create([
-                    'action' => 'deleted',
-                    'description' => "Deleted variable \"{$variable->key}\" from \"{$app->name}\"",
-                    'loggable_type' => 'variable',
-                    'loggable_id' => $variable->id,
-                    'user_id' => $request->user()->id,
-                ]);
-                $variable->delete();
-                $deleted++;
-            });
+        $removed = $existing->whereNotIn('id', $processedIds);
+        foreach ($removed as $variable) {
+            LogEntry::create([
+                'action' => 'deleted',
+                'description' => "Deleted variable \"{$variable->key}\" from \"{$app->name}\"",
+                'loggable_type' => 'variable',
+                'loggable_id' => $variable->id,
+                'user_id' => $request->user()->id,
+            ]);
+            $variable->delete();
+        }
+        $deleted = $removed->count();
 
-        $reordered = array_values(array_intersect($processedKeys, $originalOrder)) !== array_values($originalOrder);
+        $originalOrder = $existing->whereIn('id', $processedIds)->pluck('id')->all();
+        $reordered = array_values(array_intersect($processedIds, $originalOrder)) !== $originalOrder;
 
         if ($imported > 0) {
             LogEntry::create([
@@ -177,6 +190,50 @@ class VariableController extends Controller
         return back();
     }
 
+    /**
+     * Pair each parsed entry with the existing variable it most likely
+     * refers to, so comment toggles and edits keep their version history.
+     * Exact matches (key, commented state, value) win, then key and value
+     * (a comment toggle), then key and state (a value edit), then key alone. Unmatched entries are left out of the result.
+     *
+     * @param  list<array{key: string, value: string, commented: bool}>  $entries
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Variable>  $existing
+     * @param  array<int, string|null>  $currentValues
+     * @return array<int, Variable>
+     */
+    private function matchEntriesToVariables(array $entries, $existing, array $currentValues): array
+    {
+        $available = $existing->keyBy('id');
+        $matches = [];
+
+        $passes = [
+            fn (Variable $variable, array $entry): bool => $variable->is_commented === $entry['commented']
+                && ($currentValues[$variable->id] ?? null) === $entry['value'],
+            fn (Variable $variable, array $entry): bool => ($currentValues[$variable->id] ?? null) === $entry['value'],
+            fn (Variable $variable, array $entry): bool => $variable->is_commented === $entry['commented'],
+            fn (): bool => true,
+        ];
+
+        foreach ($passes as $isMatch) {
+            foreach ($entries as $index => $entry) {
+                if (isset($matches[$index])) {
+                    continue;
+                }
+
+                $candidate = $available->first(
+                    fn (Variable $variable): bool => $variable->key === $entry['key'] && $isMatch($variable, $entry),
+                );
+
+                if ($candidate !== null) {
+                    $matches[$index] = $candidate;
+                    $available->forget($candidate->id);
+                }
+            }
+        }
+
+        return $matches;
+    }
+
     public function update(Request $request, Variable $variable)
     {
         $this->authorize('update', $variable);
@@ -184,15 +241,36 @@ class VariableController extends Controller
         $validated = $request->validate([
             'key' => ['sometimes', 'required', 'string', 'alpha_dash', 'max:255'],
             'value' => ['sometimes', 'nullable', 'string'],
+            'is_commented' => ['sometimes', 'boolean'],
         ]);
 
         $app = $variable->app;
 
-        if (isset($validated['key']) && $validated['key'] !== $variable->key) {
-            if ($app->variables()->where('environment_id', $variable->environment_id)->where('key', $validated['key'])->where('id', '!=', $variable->id)->exists()) {
+        $newKey = $validated['key'] ?? $variable->key;
+        $newCommented = $request->has('is_commented') ? $request->boolean('is_commented') : $variable->is_commented;
+        $keyChanged = $newKey !== $variable->key;
+        $commentedChanged = $newCommented !== $variable->is_commented;
+
+        // Commented-out variables may share a key; active ones may not.
+        if (($keyChanged || $commentedChanged) && !$newCommented) {
+            if ($app->variables()->where('environment_id', $variable->environment_id)->where('key', $newKey)->where('is_commented', false)->where('id', '!=', $variable->id)->exists()) {
                 return back()->withErrors(['key' => 'This variable key already exists in this environment.']);
             }
+        }
 
+        if ($commentedChanged) {
+            $variable->update(['is_commented' => $newCommented]);
+
+            LogEntry::create([
+                'action' => $newCommented ? 'commented_out' : 'uncommented',
+                'description' => ($newCommented ? 'Commented out' : 'Uncommented') . " variable \"{$variable->key}\" in \"{$app->name}\"",
+                'loggable_type' => 'variable',
+                'loggable_id' => $variable->id,
+                'user_id' => $request->user()->id,
+            ]);
+        }
+
+        if ($keyChanged) {
             $oldKey = $variable->key;
             $variable->update(['key' => $validated['key']]);
 
@@ -319,6 +397,7 @@ class VariableController extends Controller
             return [
                 'key' => $variable->key,
                 'value' => $variable->latest_version !== null ? $variable->latest_version->value : '',
+                'commented' => $variable->is_commented,
             ];
         })->all());
 

@@ -37,10 +37,10 @@ class SetupAppController extends Controller
         if ($setupToken->environment_id) {
             $app->setRelation(
                 'variables',
-                $setupToken->environment->variables()->get()
+                $setupToken->environment->variables()->where('is_commented', false)->get()
             );
         } else {
-            $app->load('variables');
+            $app->load(['variables' => fn ($query) => $query->where('is_commented', false)]);
         }
 
         $setupToken->delete();

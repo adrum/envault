@@ -12,7 +12,7 @@ class UpdateAppController extends Controller
     {
         $this->authorize('view', $app);
 
-        $app->load('variables');
+        $app->load(['variables' => fn ($query) => $query->where('is_commented', false)]);
 
         return response()->json($app);
     }

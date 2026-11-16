@@ -31,6 +31,25 @@ class Variable extends Model
      */
     protected $guarded = ['latest_version'];
 
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_commented' => false,
+    ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_commented' => 'boolean',
+        ];
+    }
+
     /** @return Attribute<VariableVersion|null, never> */
     protected function latestVersion(): Attribute
     {

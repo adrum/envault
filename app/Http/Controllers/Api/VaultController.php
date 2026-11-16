@@ -100,7 +100,7 @@ class VaultController extends Controller
         $latestTime = null;
         $maxVersion = 0;
 
-        foreach ($environment->variables as $variable) {
+        foreach ($environment->variables()->where('is_commented', false)->get() as $variable) {
             $latest = $variable->latest_version;
             if ($latest) {
                 $data[$variable->key] = $latest->value;

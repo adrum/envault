@@ -6,8 +6,8 @@ test('parses bare key/value pairs', function () {
     $entries = EnvFile::parse("FOO=bar\nBAZ=qux");
 
     expect($entries)->toEqual([
-        ['key' => 'FOO', 'value' => 'bar'],
-        ['key' => 'BAZ', 'value' => 'qux'],
+        ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
+        ['key' => 'BAZ', 'value' => 'qux', 'commented' => false],
     ]);
 });
 
@@ -15,8 +15,8 @@ test('strips surrounding double and single quotes', function () {
     $entries = EnvFile::parse("FOO=\"bar\"\nBAZ='qux'");
 
     expect($entries)->toEqual([
-        ['key' => 'FOO', 'value' => 'bar'],
-        ['key' => 'BAZ', 'value' => 'qux'],
+        ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
+        ['key' => 'BAZ', 'value' => 'qux', 'commented' => false],
     ]);
 });
 
@@ -41,8 +41,9 @@ test('parses double-quoted multiline value (PEM key)', function () {
         [
             'key' => 'PASSPORT_PRIVATE_KEY',
             'value' => "-----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAKj==\n-----END RSA PRIVATE KEY-----",
+            'commented' => false,
         ],
-        ['key' => 'NEXT', 'value' => 'after'],
+        ['key' => 'NEXT', 'value' => 'after', 'commented' => false],
     ]);
 });
 
@@ -54,12 +55,50 @@ test('parses single-quoted multiline value', function () {
     expect($entries[0]['value'])->toEqual("-----BEGIN PUBLIC KEY-----\nABC\n-----END PUBLIC KEY-----");
 });
 
-test('skips comments and blank lines', function () {
-    $env = "# comment\n\nFOO=bar\n# trailing";
+test('skips prose comments and blank lines', function () {
+    $env = "# comment\n\nFOO=bar\n# see https://example.com/?a=b\n# trailing";
 
     expect(EnvFile::parse($env))->toEqual([
-        ['key' => 'FOO', 'value' => 'bar'],
+        ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
     ]);
+});
+
+test('keeps commented-out assignments and flags them', function () {
+    $env = "FOO=bar\n# FOO=old\n#BAZ=\"quoted # value\"\n  ## QUX = spaced";
+
+    expect(EnvFile::parse($env))->toEqual([
+        ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
+        ['key' => 'FOO', 'value' => 'old', 'commented' => true],
+        ['key' => 'BAZ', 'value' => 'quoted # value', 'commented' => true],
+        ['key' => 'QUX', 'value' => 'spaced', 'commented' => true],
+    ]);
+});
+
+test('a commented-out value never continues onto the next line', function () {
+    $env = "# FOO=\"unterminated\nBAR=next";
+
+    expect(EnvFile::parse($env))->toEqual([
+        ['key' => 'FOO', 'value' => 'unterminated', 'commented' => true],
+        ['key' => 'BAR', 'value' => 'next', 'commented' => false],
+    ]);
+});
+
+test('serialize writes commented entries on a single comment line', function () {
+    $entries = [
+        ['key' => 'A', 'value' => 'simple', 'commented' => true],
+        ['key' => 'B', 'value' => "line1\nline2", 'commented' => true],
+    ];
+
+    $out = EnvFile::serialize($entries);
+
+    expect($out)->toEqual("# A=simple\n# B=\"line1\\nline2\"");
+    expect(EnvFile::parse($out))->toEqual($entries);
+});
+
+test('reports keys assigned by more than one uncommented line', function () {
+    $entries = EnvFile::parse("FOO=1\nBAR=1\nFOO=2\n# BAR=2\n# BAZ=1\n# BAZ=2");
+
+    expect(EnvFile::duplicateActiveKeys($entries))->toEqual(['FOO']);
 });
 
 test('serialize quotes multiline values and preserves newlines', function () {
@@ -79,8 +118,8 @@ test('serialize escapes backslashes and quotes', function () {
 
 test('parse and serialize round-trip a PEM key', function () {
     $value = "-----BEGIN RSA PRIVATE KEY-----\nMIIB\n-----END RSA PRIVATE KEY-----";
-    $serialized = EnvFile::serialize([['key' => 'KEY', 'value' => $value]]);
+    $serialized = EnvFile::serialize([['key' => 'KEY', 'value' => $value, 'commented' => false]]);
     $parsed = EnvFile::parse($serialized);
 
-    expect($parsed)->toEqual([['key' => 'KEY', 'value' => $value]]);
+    expect($parsed)->toEqual([['key' => 'KEY', 'value' => $value, 'commented' => false]]);
 });

@@ -108,7 +108,7 @@ test('export round-trips a multiline value', function () {
         ->getContent();
 
     $reparsed = \App\Support\EnvFile::parse($exported);
-    expect($reparsed)->toEqual([['key' => 'KEY', 'value' => $pem]]);
+    expect($reparsed)->toEqual([['key' => 'KEY', 'value' => $pem, 'commented' => false]]);
 });
 
 test('import removes variables that are not in the content', function () {

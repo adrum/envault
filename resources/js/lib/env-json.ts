@@ -5,7 +5,16 @@
 
 // Parse a .env-formatted string. Mirrors App\Support\EnvFile::parse on the
 // backend so the frontend bulk editor and the import endpoint behave identically.
-export type EnvEntry = { key: string; value: string; quoted?: boolean };
+// Commented-out assignments (`# KEY=value`) are kept and flagged `commented`;
+// any other comment is skipped.
+export type EnvEntry = {
+  key: string;
+  value: string;
+  quoted?: boolean;
+  commented?: boolean;
+};
+
+const COMMENTED_ASSIGNMENT = /^[A-Za-z0-9_.-]+[ \t]*=/;
 
 export const parseEnvFile = (content: string): EnvEntry[] => {
   const out: EnvEntry[] = [];
@@ -23,7 +32,16 @@ export const parseEnvFile = (content: string): EnvEntry[] => {
       continue;
     }
     if (content[i] === "#") {
+      const commentStart = i;
       while (i < len && content[i] !== "\n") i++;
+      // A commented-out value never continues past the end of its line.
+      const assignment = content
+        .substring(commentStart, i)
+        .replace(/^[# \t]+/, "");
+      if (COMMENTED_ASSIGNMENT.test(assignment)) {
+        const [entry] = parseEnvFile(assignment);
+        if (entry) out.push({ ...entry, commented: true });
+      }
       i = advancePastNewline(i);
       continue;
     }
@@ -97,8 +115,34 @@ export const formatEnvValue = (value: string): string => {
   return `"${escaped}"`;
 };
 
+// Commented entries are written as `# KEY=value` with newlines escaped so the
+// whole value stays inside the comment.
 export const serializeEnvFile = (entries: EnvEntry[]): string =>
-  entries.map((e) => `${e.key}=${formatEnvValue(e.value)}`).join("\n");
+  entries
+    .map((e) =>
+      e.commented
+        ? `# ${e.key}=${formatEnvValue(e.value).replace(/\n/g, "\\n")}`
+        : `${e.key}=${formatEnvValue(e.value)}`,
+    )
+    .join("\n");
+
+// Keys assigned by more than one uncommented line. Commented-out lines may
+// repeat a key freely.
+export const duplicateActiveKeys = (entries: EnvEntry[]): string[] => {
+  const counts = new Map<string, number>();
+  for (const { key, commented } of entries) {
+    if (!commented) counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts].filter(([, count]) => count > 1).map(([key]) => key);
+};
+
+// JSON has no comments, so a trip through JSON mode drops commented-out
+// lines. Re-attach the ones from the env text the JSON was generated from.
+export const carryCommentedEntries = (env: string, source: string): string => {
+  const commented = parseEnvFile(source).filter((e) => e.commented);
+  if (commented.length === 0) return env;
+  return [env, serializeEnvFile(commented)].filter(Boolean).join("\n\n");
+};
 
 // Coerce a string env value to a JSON-friendly type for nicer appsettings.json
 // output. Quoting is the escape hatch: `KEY=null` becomes JSON null while
@@ -127,7 +171,8 @@ export const looksLikeJsonLiteral = (value: string): boolean =>
 // into a nested JSON string. Numeric path segments produce arrays.
 export const envToNestedJson = (env: string): string => {
   const root: Record<string, unknown> = {};
-  for (const { key, value, quoted } of parseEnvFile(env)) {
+  for (const { key, value, quoted, commented } of parseEnvFile(env)) {
+    if (commented) continue;
     const parts = key.split("__");
     let cursor: Record<string | number, unknown> = root as Record<
       string | number,

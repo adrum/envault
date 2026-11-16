@@ -1,6 +1,8 @@
 import { AppColor } from "@/colors";
 import { WarningsModal, type Warning } from "@/components/warnings-modal";
 import {
+  carryCommentedEntries,
+  duplicateActiveKeys,
   envToNestedJson,
   keysLookNested,
   nestedJsonToEnv,
@@ -105,6 +107,7 @@ type VariableVersion = {
 type Variable = {
   id: number;
   key: string;
+  is_commented: boolean;
   latest_version: VariableVersion | null;
   versions: VariableVersion[];
 };
@@ -175,6 +178,7 @@ export default function AppShow({
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editKey, setEditKey] = useState("");
   const [editValue, setEditValue] = useState("");
+  const [editCommented, setEditCommented] = useState(false);
 
   // Rollback modal
   const [rollbackVariable, setRollbackVariable] = useState<Variable | null>(
@@ -222,11 +226,36 @@ export default function AppShow({
     (currentEnv?.variables ?? []).map((v) => ({
       key: v.key,
       value: v.latest_version?.value ?? "",
+      commented: v.is_commented,
     })),
   );
   const looksNested =
     jsonModeEnabled &&
-    keysLookNested((currentEnv?.variables ?? []).map((v) => v.key));
+    keysLookNested(
+      (currentEnv?.variables ?? [])
+        .filter((v) => !v.is_commented)
+        .map((v) => v.key),
+    );
+
+  // A key may only be set once by uncommented lines; commented-out lines can
+  // repeat it. Saving is blocked while the editor content breaks that rule.
+  const duplicateKeysMessage = (content: string): string | null => {
+    const keys = duplicateActiveKeys(parseEnvFile(content));
+    if (keys.length === 0) return null;
+    return `${keys.join(", ")} ${keys.length === 1 ? "is" : "are"} set more than once. Comment out or remove the extra lines.`;
+  };
+  const bulkDuplicateError = bulkJsonMode
+    ? null
+    : duplicateKeysMessage(bulkContent);
+  const importDuplicateError = duplicateKeysMessage(importContent);
+  const editKeyConflict =
+    !!selectedVariable &&
+    !editCommented &&
+    (editKey !== selectedVariable.key || selectedVariable.is_commented) &&
+    (currentEnv?.variables ?? []).some(
+      (v) =>
+        v.id !== selectedVariable.id && !v.is_commented && v.key === editKey,
+    );
   // Default to JSON when the variables look nested; Option inverts the default.
   const copyAsJson =
     jsonModeEnabled && (looksNested ? !altPressed : altPressed);
@@ -268,6 +297,7 @@ export default function AppShow({
     setSelectedVariable(variable);
     setEditKey(variable.key);
     setEditValue(variable.latest_version?.value ?? "");
+    setEditCommented(variable.is_commented);
     setModalMode("view");
   };
 
@@ -281,6 +311,7 @@ export default function AppShow({
     if (selectedVariable) {
       setEditKey(selectedVariable.key);
       setEditValue(selectedVariable.latest_version?.value ?? "");
+      setEditCommented(selectedVariable.is_commented);
     }
     setModalMode("view");
   };
@@ -294,6 +325,7 @@ export default function AppShow({
   const currentEnvValueMap = (): Record<string, string> => {
     const map: Record<string, string> = {};
     for (const v of currentEnv?.variables ?? []) {
+      if (v.is_commented) continue;
       map[v.key] = v.latest_version?.value ?? "";
     }
     return map;
@@ -301,7 +333,8 @@ export default function AppShow({
 
   const parseEnvToMap = (env: string): Record<string, string> => {
     const map: Record<string, string> = {};
-    for (const { key, value } of parseEnvFile(env)) {
+    for (const { key, value, commented } of parseEnvFile(env)) {
+      if (commented) continue;
       map[key] = value;
     }
     return map;
@@ -445,10 +478,12 @@ export default function AppShow({
   const handleEditVariable = () => {
     if (!selectedVariable) return;
     setSaving(true);
-    const data: Record<string, string> = {};
+    const data: Record<string, string | boolean> = {};
     if (editKey !== selectedVariable.key) data.key = editKey;
     if (editValue !== (selectedVariable.latest_version?.value ?? ""))
       data.value = editValue;
+    if (editCommented !== selectedVariable.is_commented)
+      data.is_commented = editCommented;
 
     router.patch(`/variables/${selectedVariable.id}`, data, {
       onSuccess: () => {
@@ -494,22 +529,27 @@ export default function AppShow({
 
   const openBulkEdit = () => {
     const envVariables = currentEnv?.variables ?? [];
-    const lines = envVariables.map((v) =>
-      serializeEnvFile([{ key: v.key, value: v.latest_version?.value ?? "" }]),
-    );
 
-    // Group by prefix (everything before the first underscore)
+    // Group by prefix (everything before the first underscore of the key)
     let lastPrefix = "";
     const grouped: string[] = [];
-    for (const line of lines) {
-      const underscoreIndex = line.indexOf("_");
+    for (const v of envVariables) {
+      const underscoreIndex = v.key.indexOf("_");
       const prefix =
-        underscoreIndex > 0 ? line.substring(0, underscoreIndex) : line;
+        underscoreIndex > 0 ? v.key.substring(0, underscoreIndex) : v.key;
       if (lastPrefix && prefix !== lastPrefix) {
         grouped.push("");
       }
       lastPrefix = prefix;
-      grouped.push(line);
+      grouped.push(
+        serializeEnvFile([
+          {
+            key: v.key,
+            value: v.latest_version?.value ?? "",
+            commented: v.is_commented,
+          },
+        ]),
+      );
     }
 
     const flat = grouped.join("\n");
@@ -544,7 +584,9 @@ export default function AppShow({
       return;
     }
     try {
-      setBulkContent(nestedJsonToEnv(bulkJsonContent));
+      setBulkContent(
+        carryCommentedEntries(nestedJsonToEnv(bulkJsonContent), bulkContent),
+      );
       setBulkJsonError(null);
       setBulkJsonMode(false);
     } catch (err) {
@@ -558,7 +600,10 @@ export default function AppShow({
   const resolveBulkEnvContent = (): string | null => {
     if (!bulkJsonMode) return bulkContent;
     try {
-      const env = nestedJsonToEnv(bulkJsonContent);
+      const env = carryCommentedEntries(
+        nestedJsonToEnv(bulkJsonContent),
+        bulkContent,
+      );
       setBulkJsonError(null);
       return env;
     } catch (err) {
@@ -772,9 +817,20 @@ export default function AppShow({
                   className="flex w-full items-center justify-between px-4 py-4 text-left transition-colors duration-150 hover:bg-gray-50 focus:bg-gray-100 focus:outline-none sm:px-6 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
                 >
                   <div className="min-w-0 flex-1">
-                    <Text size="sm" fw={500} className="text-primary!">
-                      {variable.key}
-                    </Text>
+                    {variable.is_commented ? (
+                      <Group gap="xs">
+                        <Text size="sm" fw={500} c="dimmed" ff="monospace">
+                          # {variable.key}
+                        </Text>
+                        <Badge size="xs" variant="light" color="gray">
+                          Commented out
+                        </Badge>
+                      </Group>
+                    ) : (
+                      <Text size="sm" fw={500} className="text-primary!">
+                        {variable.key}
+                      </Text>
+                    )}
                     <Text size="xs" c="dimmed" mt={2}>
                       {variable.latest_version
                         ? `Updated ${new Date(variable.latest_version.created_at).toLocaleDateString()}`
@@ -861,9 +917,16 @@ export default function AppShow({
       >
         {selectedVariable && modalMode === "view" && (
           <>
-            <Text size="xl" fw={700} mb="md">
-              {selectedVariable.key}
-            </Text>
+            <Group gap="sm" mb="md">
+              <Text size="xl" fw={700}>
+                {selectedVariable.key}
+              </Text>
+              {selectedVariable.is_commented && (
+                <Badge variant="light" color="gray">
+                  Commented out
+                </Badge>
+              )}
+            </Group>
             <div className="border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-4 border-b border-gray-100 py-5 dark:border-gray-800">
                 <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
@@ -924,6 +987,11 @@ export default function AppShow({
                   value={editKey}
                   onChange={(e) => setEditKey(e.currentTarget.value)}
                   className="flex-1"
+                  error={
+                    editKeyConflict
+                      ? "Another active variable already uses this key."
+                      : pageErrors?.key
+                  }
                 />
               </div>
               <div className="flex items-start gap-4 py-5">
@@ -958,6 +1026,14 @@ export default function AppShow({
                   )}
                 </div>
               </div>
+              <div className="border-t border-gray-100 py-5 dark:border-gray-800">
+                <Switch
+                  checked={editCommented}
+                  onChange={(e) => setEditCommented(e.currentTarget.checked)}
+                  label="Commented out"
+                  description="Kept in the .env file as a comment and left out of what apps receive."
+                />
+              </div>
             </div>
             <div className="flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
               <Group gap="xs">
@@ -981,6 +1057,7 @@ export default function AppShow({
               <Button
                 onClick={handleEditVariable}
                 loading={saving}
+                disabled={editKeyConflict}
                 leftSection={<FontAwesomeIcon icon={faCheck} />}
               >
                 Save
@@ -1001,8 +1078,13 @@ export default function AppShow({
           <Text size="sm" c="dimmed">
             {bulkJsonMode
               ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat .NET-style keys using __ separators."
-              : "Edit all variables as a .env file. Changes will be saved when you click Save."}
+              : "Edit all variables as a .env file. Commented-out lines like # KEY=value are kept. Changes will be saved when you click Save."}
           </Text>
+          {(bulkDuplicateError || pageErrors?.env_content) && (
+            <Text size="sm" c="red">
+              {bulkDuplicateError ?? pageErrors?.env_content}
+            </Text>
+          )}
           {(bulkJsonError || bulkJsonParseError) && (
             <Text size="sm" c="red">
               {bulkJsonError ?? bulkJsonParseError}
@@ -1061,7 +1143,7 @@ export default function AppShow({
                 disabled={
                   bulkJsonMode
                     ? !bulkJsonContent.trim() || !bulkJsonValid
-                    : !bulkContent.trim()
+                    : !bulkContent.trim() || !!bulkDuplicateError
                 }
                 leftSection={<FontAwesomeIcon icon={faCheck} />}
               >
@@ -1143,6 +1225,7 @@ export default function AppShow({
             onChange={(e) => setImportContent(e.currentTarget.value)}
             autosize
             minRows={8}
+            error={importDuplicateError ?? pageErrors?.env_content}
           />
           <input
             type="file"
@@ -1165,7 +1248,7 @@ export default function AppShow({
             <Button
               onClick={handleImport}
               loading={saving}
-              disabled={!importContent.trim()}
+              disabled={!importContent.trim() || !!importDuplicateError}
             >
               Import
             </Button>

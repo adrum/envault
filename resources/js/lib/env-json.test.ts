@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  carryCommentedEntries,
   coerceJsonValue,
+  duplicateActiveKeys,
   envToNestedJson,
   formatEnvValue,
   keysLookNested,
@@ -46,6 +48,52 @@ describe("parseEnvFile", () => {
     expect(parseEnvFile("NOT_AN_ASSIGNMENT\nKEY=value")).toEqual([
       { key: "KEY", value: "value", quoted: false },
     ]);
+  });
+});
+
+describe("commented-out assignments", () => {
+  it("keeps them, flagged as commented, and skips prose comments", () => {
+    expect(
+      parseEnvFile(
+        'KEY=live\n# KEY=old\n#OTHER="a # b"\n# just a note\n# see https://x.test/?a=b',
+      ),
+    ).toEqual([
+      { key: "KEY", value: "live", quoted: false },
+      { key: "KEY", value: "old", quoted: false, commented: true },
+      { key: "OTHER", value: "a # b", quoted: true, commented: true },
+    ]);
+  });
+
+  it("never lets a commented value continue onto the next line", () => {
+    expect(parseEnvFile('# KEY="unterminated\nNEXT=value')).toEqual([
+      { key: "KEY", value: "unterminated", quoted: true, commented: true },
+      { key: "NEXT", value: "value", quoted: false },
+    ]);
+  });
+
+  it("round-trips a commented multiline value on one line", () => {
+    const entries = [{ key: "KEY", value: "one\ntwo", commented: true }];
+    const text = serializeEnvFile(entries);
+    expect(text).toBe('# KEY="one\\ntwo"');
+    expect(parseEnvFile(text)).toEqual([
+      { key: "KEY", value: "one\ntwo", quoted: true, commented: true },
+    ]);
+  });
+
+  it("reports only keys repeated by uncommented lines", () => {
+    const entries = parseEnvFile("A=1\nB=1\nA=2\n# B=2\n# C=1\n# C=2");
+    expect(duplicateActiveKeys(entries)).toEqual(["A"]);
+  });
+
+  it("leaves them out of nested JSON", () => {
+    expect(JSON.parse(envToNestedJson("A=1\n# A=2\n# B=3"))).toEqual({ A: 1 });
+  });
+
+  it("re-attaches them after a trip through JSON", () => {
+    const source = "A=1\n# A=2\n# B=3";
+    const fromJson = nestedJsonToEnv(envToNestedJson(source));
+    expect(carryCommentedEntries(fromJson, source)).toBe("A=1\n\n# A=2\n# B=3");
+    expect(carryCommentedEntries("A=1", "A=1")).toBe("A=1");
   });
 });
 

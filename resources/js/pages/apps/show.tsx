@@ -1,7 +1,6 @@
 import { AppColor } from "@/colors";
 import { WarningsModal, type Warning } from "@/components/warnings-modal";
 import {
-  carryCommentedEntries,
   duplicateActiveKeys,
   envToNestedJson,
   keysLookNested,
@@ -50,6 +49,8 @@ import { useEffect, useRef, useState } from "react";
 // a multiline quoted value so PEM keys and similar payloads stay coloured.
 type EnvLangState = { inString: false } | { inString: true; quote: '"' | "'" };
 const envLanguage = StreamLanguage.define<EnvLangState>({
+  // Lets the editor's toggle-comment shortcut (Cmd/Ctrl+/) work on env lines.
+  languageData: { commentTokens: { line: "#" } },
   startState: () => ({ inString: false }),
   token(stream, state) {
     if (state.inString) {
@@ -210,7 +211,7 @@ export default function AppShow({
   let bulkJsonParseError: string | null = null;
   if (bulkJsonMode && bulkJsonContent.trim()) {
     try {
-      JSON.parse(bulkJsonContent);
+      nestedJsonToEnv(bulkJsonContent);
     } catch (err) {
       bulkJsonValid = false;
       bulkJsonParseError = err instanceof Error ? err.message : "Invalid JSON";
@@ -556,7 +557,7 @@ export default function AppShow({
     setBulkContent(flat);
     if (looksNested) {
       try {
-        setBulkJsonContent(envToNestedJson(flat));
+        setBulkJsonContent(envToNestedJson(flat, { comments: true }));
         setBulkJsonMode(true);
       } catch {
         setBulkJsonContent("");
@@ -574,7 +575,7 @@ export default function AppShow({
   const toggleBulkJsonMode = (enabled: boolean) => {
     if (enabled) {
       try {
-        setBulkJsonContent(envToNestedJson(bulkContent));
+        setBulkJsonContent(envToNestedJson(bulkContent, { comments: true }));
         setBulkJsonError(null);
         setBulkJsonMode(true);
       } catch (err) {
@@ -585,9 +586,7 @@ export default function AppShow({
       return;
     }
     try {
-      setBulkContent(
-        carryCommentedEntries(nestedJsonToEnv(bulkJsonContent), bulkContent),
-      );
+      setBulkContent(nestedJsonToEnv(bulkJsonContent));
       setBulkJsonError(null);
       setBulkJsonMode(false);
     } catch (err) {
@@ -601,10 +600,7 @@ export default function AppShow({
   const resolveBulkEnvContent = (): string | null => {
     if (!bulkJsonMode) return bulkContent;
     try {
-      const env = carryCommentedEntries(
-        nestedJsonToEnv(bulkJsonContent),
-        bulkContent,
-      );
+      const env = nestedJsonToEnv(bulkJsonContent);
       setBulkJsonError(null);
       return env;
     } catch (err) {
@@ -1112,7 +1108,7 @@ export default function AppShow({
         <Stack>
           <Text size="sm" c="dimmed">
             {bulkJsonMode
-              ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat .NET-style keys using __ separators."
+              ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat .NET-style keys using __ separators. // comments are kept."
               : "Edit all variables as a .env file. Commented-out lines like # KEY=value are kept. Changes will be saved when you click Save."}
           </Text>
           {bulkSaveError && (
@@ -1162,15 +1158,30 @@ export default function AppShow({
             )}
           </div>
           <Group justify="space-between">
-            {jsonModeEnabled ? (
-              <Switch
-                checked={bulkJsonMode}
-                onChange={(e) => toggleBulkJsonMode(e.currentTarget.checked)}
-                label="JSON mode"
-              />
-            ) : (
-              <span />
-            )}
+            <Group gap="sm">
+              {jsonModeEnabled && (
+                <Switch
+                  checked={bulkJsonMode}
+                  onChange={(e) => toggleBulkJsonMode(e.currentTarget.checked)}
+                  label="JSON mode"
+                />
+              )}
+              <CopyButton value={bulkJsonMode ? bulkJsonContent : bulkContent}>
+                {({ copied, copy }) => (
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    leftSection={
+                      <FontAwesomeIcon icon={copied ? faCheck : faClipboard} />
+                    }
+                    onClick={copy}
+                    color={copied ? "teal" : undefined}
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </Button>
+                )}
+              </CopyButton>
+            </Group>
             <Group>
               <Button variant="outline" onClick={closeBulk}>
                 Cancel

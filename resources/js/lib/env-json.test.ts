@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  carryCommentedEntries,
   coerceJsonValue,
   duplicateActiveKeys,
   envToNestedJson,
@@ -128,15 +127,85 @@ describe("commented-out assignments", () => {
     expect(duplicateActiveKeys(entries)).toEqual(["A"]);
   });
 
-  it("leaves them out of nested JSON", () => {
+  it("leaves them out of strict nested JSON", () => {
     expect(JSON.parse(envToNestedJson("A=1\n# A=2\n# B=3"))).toEqual({ A: 1 });
   });
+});
 
-  it("re-attaches them after a trip through JSON", () => {
-    const source = "A=1\n# A=2\n# B=3";
-    const fromJson = nestedJsonToEnv(envToNestedJson(source));
-    expect(carryCommentedEntries(fromJson, source)).toBe("A=1\n\n# A=2\n# B=3");
-    expect(carryCommentedEntries("A=1", "A=1")).toBe("A=1");
+describe("JSONC comments", () => {
+  const env = [
+    "# Database",
+    "Db__Host=live",
+    "#Db__Host=local",
+    "# Db__Port=5432",
+    "#   spaced note",
+    "App__Name=envault",
+    "# Cache__Driver=redis",
+    "# the end",
+  ].join("\n");
+  const jsonc = [
+    "{",
+    '  "Db": {',
+    "    // Database",
+    '    "Host": "live"',
+    '    //"Host": "local"',
+    '    // "Port": 5432',
+    "  },",
+    '  "App": {',
+    "    //   spaced note",
+    '    "Name": "envault"',
+    "  }",
+    '  // "Cache__Driver": "redis"',
+    "  // the end",
+    "}",
+  ].join("\n");
+
+  it("writes commented entries as // lines inside their section", () => {
+    expect(envToNestedJson(env, { comments: true })).toBe(jsonc);
+  });
+
+  it("reads them back as commented env lines in document order", () => {
+    expect(nestedJsonToEnv(jsonc)).toBe(
+      [
+        "# Database",
+        "Db__Host=live",
+        "#Db__Host=local",
+        "# Db__Port=5432",
+        "#   spaced note",
+        "App__Name=envault",
+        "# Cache__Driver=redis",
+        "# the end",
+      ].join("\n"),
+    );
+  });
+
+  it("keeps a commented value's JSON type and newlines on one line", () => {
+    const source = '# A="42"\n# B=42\n# C="one\\ntwo"';
+    const out = envToNestedJson(source, { comments: true });
+    expect(out).toBe(
+      '{\n  // "A": "42"\n  // "B": 42\n  // "C": "one\\ntwo"\n}',
+    );
+    expect(nestedJsonToEnv(out)).toBe(source);
+  });
+
+  it("accepts trailing commas, block comments and trailing line comments", () => {
+    expect(
+      nestedJsonToEnv(
+        '{\n  /* first\n   * second */\n  "A": 1, // after A\n  "B": [true, null,],\n}',
+      ),
+    ).toBe("# first\n# second\nA=1\n# after A\nB__0=true\nB__1=null");
+  });
+
+  it("treats a comment that is not a single scalar member as plain text", () => {
+    expect(nestedJsonToEnv('{\n  // "A": {\n  // just "text": here\n}')).toBe(
+      '# "A": {\n# just "text": here',
+    );
+  });
+
+  it("rejects malformed JSON with the offending line", () => {
+    expect(() => nestedJsonToEnv('{\n  "A": 1\n  "B": 2\n}')).toThrow(/line 3/);
+    expect(() => nestedJsonToEnv('{ "A": ')).toThrow(/end of JSON/);
+    expect(() => nestedJsonToEnv('{ "A": 1 } x')).toThrow(SyntaxError);
   });
 });
 

@@ -59,17 +59,17 @@ test('keeps plain comments under an empty key and skips blank lines', function (
     $env = "# comment\n\nFOO=bar\n#see https://example.com/?a=b\n#";
 
     expect(EnvFile::parse($env))->toEqual([
-        ['key' => '', 'value' => 'comment', 'commented' => true],
+        ['key' => '', 'value' => 'comment', 'commented' => true, 'prefix' => '# '],
         ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
-        ['key' => '', 'value' => 'see https://example.com/?a=b', 'commented' => true],
-        ['key' => '', 'value' => '', 'commented' => true],
+        ['key' => '', 'value' => 'see https://example.com/?a=b', 'commented' => true, 'prefix' => '#'],
+        ['key' => '', 'value' => '', 'commented' => true, 'prefix' => '#'],
     ]);
 });
 
 test('serialize writes plain comments back as comment lines', function () {
     $entries = [
-        ['key' => '', 'value' => 'Database', 'commented' => true],
-        ['key' => '', 'value' => '', 'commented' => true],
+        ['key' => '', 'value' => 'Database', 'commented' => true, 'prefix' => '# '],
+        ['key' => '', 'value' => '', 'commented' => true, 'prefix' => '#'],
         ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
     ];
 
@@ -84,9 +84,9 @@ test('keeps commented-out assignments and flags them', function () {
 
     expect(EnvFile::parse($env))->toEqual([
         ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
-        ['key' => 'FOO', 'value' => 'old', 'commented' => true],
-        ['key' => 'BAZ', 'value' => 'quoted # value', 'commented' => true],
-        ['key' => 'QUX', 'value' => 'spaced', 'commented' => true],
+        ['key' => 'FOO', 'value' => 'old', 'commented' => true, 'prefix' => '# '],
+        ['key' => 'BAZ', 'value' => 'quoted # value', 'commented' => true, 'prefix' => '#'],
+        ['key' => 'QUX', 'value' => 'spaced', 'commented' => true, 'prefix' => '## '],
     ]);
 });
 
@@ -94,21 +94,36 @@ test('a commented-out value never continues onto the next line', function () {
     $env = "# FOO=\"unterminated\nBAR=next";
 
     expect(EnvFile::parse($env))->toEqual([
-        ['key' => 'FOO', 'value' => 'unterminated', 'commented' => true],
+        ['key' => 'FOO', 'value' => 'unterminated', 'commented' => true, 'prefix' => '# '],
         ['key' => 'BAR', 'value' => 'next', 'commented' => false],
     ]);
 });
 
 test('serialize writes commented entries on a single comment line', function () {
     $entries = [
-        ['key' => 'A', 'value' => 'simple', 'commented' => true],
-        ['key' => 'B', 'value' => "line1\nline2", 'commented' => true],
+        ['key' => 'A', 'value' => 'simple', 'commented' => true, 'prefix' => '# '],
+        ['key' => 'B', 'value' => "line1\nline2", 'commented' => true, 'prefix' => '# '],
     ];
 
     $out = EnvFile::serialize($entries);
 
     expect($out)->toEqual("# A=simple\n# B=\"line1\\nline2\"");
     expect(EnvFile::parse($out))->toEqual($entries);
+});
+
+test('keeps the whitespace between the comment marker and its contents', function () {
+    $env = "#A=1\n# B=2\n#   C=3\n#\tD=4\n#tight note\n#    indented note\n## heading";
+
+    expect(EnvFile::serialize(EnvFile::parse($env)))->toEqual($env);
+});
+
+test('a commented entry without a recorded prefix is written with one space', function () {
+    $out = EnvFile::serialize([
+        ['key' => 'A', 'value' => '1', 'commented' => true],
+        ['key' => '', 'value' => 'note', 'commented' => true, 'prefix' => null],
+    ]);
+
+    expect($out)->toEqual("# A=1\n# note");
 });
 
 test('the last uncommented assignment of a key wins', function () {

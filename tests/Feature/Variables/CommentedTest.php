@@ -30,8 +30,8 @@ function storedLines(App $app): array
 {
     return $app->variables()->get()
         ->map(fn (Variable $variable): string => $variable->key === ''
-            ? '# ' . $variable->latest_version->value
-            : ($variable->is_commented ? '# ' : '') . $variable->key . '=' . $variable->latest_version->value)
+            ? $variable->comment_prefix . $variable->latest_version->value
+            : ($variable->is_commented ? $variable->comment_prefix : '') . $variable->key . '=' . $variable->latest_version->value)
         ->all();
 }
 
@@ -41,7 +41,7 @@ test('import stores commented-out lines, including ones that repeat a key', func
         'environment_id' => $this->environmentId,
     ])->assertSessionHasNoErrors();
 
-    expect(storedLines($this->app_))->toBe(['DB_HOST=live', '# DB_HOST=staging', '# DB_HOST=local', '# just a note']);
+    expect(storedLines($this->app_))->toBe(['DB_HOST=live', '# DB_HOST=staging', '#DB_HOST=local', '# just a note']);
 });
 
 test('when import content sets a key twice the last uncommented line wins', function () {
@@ -69,6 +69,36 @@ test('import keeps plain comments in place and they survive a re-import', functi
 
     expect(storedLines($this->app_))->toBe(['# Database', 'DB_HOST=live', '# Mail', 'MAIL_HOST=smtp'])
         ->and($this->app_->variables()->pluck('id')->all())->toBe($ids);
+});
+
+test('export reproduces the whitespace after each comment marker', function () {
+    $content = "#tight note\n#    indented note\n#DB_HOST=local\n#   DB_PORT=3306\nDB_NAME=app";
+
+    $this->post(route('variables.import', $this->app_), [
+        'env_content' => $content,
+        'environment_id' => $this->environmentId,
+    ])->assertSessionHasNoErrors();
+
+    $exported = $this->get(route('variables.export', ['app' => $this->app_, 'environment' => $this->environmentId]))
+        ->getContent();
+
+    expect($exported)->toBe($content);
+});
+
+test('changing only the whitespace after a comment marker is saved without a new version', function () {
+    $this->post(route('variables.import', $this->app_), [
+        'env_content' => '# DB_HOST=local',
+        'environment_id' => $this->environmentId,
+    ]);
+    $variable = $this->app_->variables()->sole();
+
+    $this->post(route('variables.import', $this->app_), [
+        'env_content' => '#DB_HOST=local',
+        'environment_id' => $this->environmentId,
+    ])->assertSessionHasNoErrors();
+
+    expect($variable->fresh()->comment_prefix)->toBe('#')
+        ->and($variable->versions()->count())->toBe(1);
 });
 
 test('export writes plain comments back as comment lines', function () {
@@ -148,7 +178,7 @@ test('a new variable may reuse the key of a commented-out one', function () {
         'environment_id' => $this->environmentId,
     ])->assertSessionHasNoErrors();
 
-    expect(storedLines($this->app_))->toEqualCanonicalizing(['# DB_HOST=local', 'DB_HOST=live']);
+    expect(storedLines($this->app_))->toEqualCanonicalizing(['DB_HOST=local', 'DB_HOST=live']);
 });
 
 test('can comment out a variable', function () {

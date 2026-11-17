@@ -7,13 +7,17 @@
 // backend so the frontend bulk editor and the import endpoint behave identically.
 // Commented-out assignments (`# KEY=value`) are kept and flagged `commented`;
 // any other comment is kept as a commented entry with an empty key and the
-// comment text as its value.
+// comment text as its value. Commented entries carry `prefix`: the comment
+// marker exactly as written, including any whitespace after the `#`.
 export type EnvEntry = {
   key: string;
   value: string;
   quoted?: boolean;
   commented?: boolean;
+  prefix?: string | null;
 };
+
+const DEFAULT_COMMENT_PREFIX = "# ";
 
 const COMMENTED_ASSIGNMENT = /^[A-Za-z0-9_.-]+[ \t]*=/;
 
@@ -36,23 +40,14 @@ export const parseEnvFile = (content: string): EnvEntry[] => {
       const commentStart = i;
       while (i < len && content[i] !== "\n") i++;
       // A commented-out value never continues past the end of its line.
-      const assignment = content
-        .substring(commentStart, i)
-        .replace(/^[# \t]+/, "");
-      const [entry] = COMMENTED_ASSIGNMENT.test(assignment)
-        ? parseEnvFile(assignment)
-        : [];
+      const [, prefix, text] = /^(#+[ \t]*)([^]*)$/.exec(
+        content.substring(commentStart, i).trimEnd(),
+      )!;
+      const [entry] = COMMENTED_ASSIGNMENT.test(text) ? parseEnvFile(text) : [];
       out.push(
         entry
-          ? { ...entry, commented: true }
-          : {
-              key: "",
-              value: content
-                .substring(commentStart, i)
-                .replace(/^#[ \t]?/, "")
-                .trimEnd(),
-              commented: true,
-            },
+          ? { ...entry, commented: true, prefix }
+          : { key: "", value: text, commented: true, prefix },
       );
       i = advancePastNewline(i);
       continue;
@@ -129,19 +124,22 @@ export const formatEnvValue = (value: string): string => {
 
 // Commented entries are written as `# KEY=value` with newlines escaped so the
 // whole value stays inside the comment. Entries with an empty key are plain
-// comments: `# text`.
+// comments: `# text`. A commented entry's prefix is written as-is; without
+// one, `# ` is used.
 export const serializeEnvFile = (entries: EnvEntry[]): string =>
   entries
-    .map((e) =>
-      e.key === ""
-        ? e.value
-            .split("\n")
-            .map((text) => `# ${text}`.trimEnd())
-            .join("\n")
-        : e.commented
-          ? `# ${e.key}=${formatEnvValue(e.value).replace(/\n/g, "\\n")}`
-          : `${e.key}=${formatEnvValue(e.value)}`,
-    )
+    .map((e) => {
+      const prefix = e.prefix ?? DEFAULT_COMMENT_PREFIX;
+      if (e.key === "") {
+        return e.value
+          .split("\n")
+          .map((text) => `${prefix}${text}`.trimEnd())
+          .join("\n");
+      }
+      return e.commented
+        ? `${prefix}${e.key}=${formatEnvValue(e.value).replace(/\n/g, "\\n")}`
+        : `${e.key}=${formatEnvValue(e.value)}`;
+    })
     .join("\n");
 
 // Keys assigned by more than one uncommented line. Commented-out lines may

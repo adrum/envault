@@ -21,9 +21,9 @@ describe("parseEnvFile", () => {
 
   it("keeps plain comments under an empty key and skips blank lines", () => {
     expect(parseEnvFile("# a comment\n\nKEY=value\n#\n")).toEqual([
-      { key: "", value: "a comment", commented: true },
+      { key: "", value: "a comment", commented: true, prefix: "# " },
       { key: "KEY", value: "value", quoted: false },
-      { key: "", value: "", commented: true },
+      { key: "", value: "", commented: true, prefix: "#" },
     ]);
   });
 
@@ -61,10 +61,33 @@ describe("commented-out assignments", () => {
       ),
     ).toEqual([
       { key: "KEY", value: "live", quoted: false },
-      { key: "KEY", value: "old", quoted: false, commented: true },
-      { key: "OTHER", value: "a # b", quoted: true, commented: true },
-      { key: "", value: "see https://x.test/?a=b", commented: true },
+      {
+        key: "KEY",
+        value: "old",
+        quoted: false,
+        commented: true,
+        prefix: "# ",
+      },
+      {
+        key: "OTHER",
+        value: "a # b",
+        quoted: true,
+        commented: true,
+        prefix: "#",
+      },
+      {
+        key: "",
+        value: "see https://x.test/?a=b",
+        commented: true,
+        prefix: "# ",
+      },
     ]);
+  });
+
+  it("keeps the whitespace between the comment marker and its contents", () => {
+    const text =
+      "#A=1\n# B=2\n#   C=3\n#\tD=4\n#tight note\n#    indented note\n## heading";
+    expect(serializeEnvFile(parseEnvFile(text))).toBe(text);
   });
 
   it("round-trips plain comments", () => {
@@ -74,7 +97,13 @@ describe("commented-out assignments", () => {
 
   it("never lets a commented value continue onto the next line", () => {
     expect(parseEnvFile('# KEY="unterminated\nNEXT=value')).toEqual([
-      { key: "KEY", value: "unterminated", quoted: true, commented: true },
+      {
+        key: "KEY",
+        value: "unterminated",
+        quoted: true,
+        commented: true,
+        prefix: "# ",
+      },
       { key: "NEXT", value: "value", quoted: false },
     ]);
   });
@@ -84,7 +113,13 @@ describe("commented-out assignments", () => {
     const text = serializeEnvFile(entries);
     expect(text).toBe('# KEY="one\\ntwo"');
     expect(parseEnvFile(text)).toEqual([
-      { key: "KEY", value: "one\ntwo", quoted: true, commented: true },
+      {
+        key: "KEY",
+        value: "one\ntwo",
+        quoted: true,
+        commented: true,
+        prefix: "# ",
+      },
     ]);
   });
 

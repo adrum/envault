@@ -99,11 +99,16 @@ class VariableController extends Controller
                     'key' => $entry['key'],
                     'environment_id' => $validated['environment_id'],
                     'is_commented' => $entry['commented'],
+                    'comment_prefix' => $entry['prefix'] ?? null,
                     'sort_order' => $index,
                 ]);
             } else {
-                $changed = $variable->is_commented !== $entry['commented'];
-                $variable->update(['sort_order' => $index, 'is_commented' => $entry['commented']]);
+                $variable->fill([
+                    'is_commented' => $entry['commented'],
+                    'comment_prefix' => $entry['prefix'] ?? null,
+                ]);
+                $changed = $variable->isDirty();
+                $variable->fill(['sort_order' => $index])->save();
             }
 
             // Only create a new version if the value actually changed
@@ -190,7 +195,7 @@ class VariableController extends Controller
      * Exact matches (key, commented state, value) win, then key and value
      * (a comment toggle), then key and state (a value edit), then key alone. Unmatched entries are left out of the result.
      *
-     * @param  list<array{key: string, value: string, commented: bool}>  $entries
+     * @param  list<array{key: string, value: string, commented: bool, prefix?: string}>  $entries
      * @param  \Illuminate\Database\Eloquent\Collection<int, Variable>  $existing
      * @param  array<int, string|null>  $currentValues
      * @return array<int, Variable>
@@ -396,6 +401,7 @@ class VariableController extends Controller
                 'key' => $variable->key,
                 'value' => $variable->latest_version !== null ? $variable->latest_version->value : '',
                 'commented' => $variable->is_commented,
+                'prefix' => $variable->comment_prefix,
             ];
         })->all());
 

@@ -108,6 +108,7 @@ type Variable = {
   id: number;
   key: string;
   is_commented: boolean;
+  comment_prefix: string | null;
   latest_version: VariableVersion | null;
   versions: VariableVersion[];
 };
@@ -228,6 +229,7 @@ export default function AppShow({
       key: v.key,
       value: v.latest_version?.value ?? "",
       commented: v.is_commented,
+      prefix: v.comment_prefix,
     })),
   );
   const looksNested =
@@ -544,6 +546,7 @@ export default function AppShow({
             key: v.key,
             value: v.latest_version?.value ?? "",
             commented: v.is_commented,
+            prefix: v.comment_prefix,
           },
         ]),
       );
@@ -819,13 +822,26 @@ export default function AppShow({
                 >
                   <div className="min-w-0 flex-1">
                     {variable.key === "" ? (
-                      <Text size="sm" c="dimmed" ff="monospace" truncate>
-                        # {variable.latest_version?.value ?? ""}
+                      <Text
+                        size="sm"
+                        c="dimmed"
+                        ff="monospace"
+                        truncate
+                        className="whitespace-pre"
+                      >
+                        {(variable.comment_prefix ?? "# ") +
+                          (variable.latest_version?.value ?? "")}
                       </Text>
                     ) : variable.is_commented ? (
                       <Group gap="xs">
-                        <Text size="sm" fw={500} c="dimmed" ff="monospace">
-                          # {variable.key}
+                        <Text
+                          size="sm"
+                          fw={500}
+                          c="dimmed"
+                          ff="monospace"
+                          className="whitespace-pre"
+                        >
+                          {(variable.comment_prefix ?? "# ") + variable.key}
                         </Text>
                         <Badge size="xs" variant="light" color="gray">
                           Commented out

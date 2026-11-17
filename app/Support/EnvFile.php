@@ -17,7 +17,10 @@ class EnvFile
      *    and the text as its value)
      *  - Blank lines (skipped)
      *
-     * @return list<array{key: string, value: string, commented: bool}>
+     * Commented entries also carry `prefix`: the comment marker exactly as
+     * written, including any whitespace after the `#` (e.g. `#`, `# `, `##  `).
+     *
+     * @return list<array{key: string, value: string, commented: bool, prefix?: string}>
      */
     public static function parse(string $content): array
     {
@@ -44,11 +47,13 @@ class EnvFile
                 while ($i < $length && $content[$i] !== "\n") {
                     $i++;
                 }
-                $comment = substr($content, $commentStart, $i - $commentStart);
-                $entries[] = self::parseCommentedAssignment($comment) ?? [
+                $comment = rtrim(substr($content, $commentStart, $i - $commentStart));
+                preg_match('/^(#+[ \t]*)(.*)$/s', $comment, $parts);
+                $entries[] = self::parseCommentedAssignment($parts[2], $parts[1]) ?? [
                     'key' => '',
-                    'value' => rtrim((string) preg_replace('/^#[ \t]?/', '', $comment)),
+                    'value' => $parts[2],
                     'commented' => true,
+                    'prefix' => $parts[1],
                 ];
                 $i = self::advancePastNewline($content, $i);
 
@@ -132,23 +137,25 @@ class EnvFile
      * the output stays human-readable). Commented entries are written as
      * `# KEY=value` with newlines escaped, so the whole value stays inside
      * the comment. Entries with an empty key are plain comments: `# text`.
+     * A commented entry's `prefix` is written as-is; without one, `# ` is used.
      *
-     * @param  iterable<array{key: string, value: string, commented?: bool}>  $entries
+     * @param  iterable<array{key: string, value: string, commented?: bool, prefix?: string|null}>  $entries
      */
     public static function serialize(iterable $entries): string
     {
         $lines = [];
         foreach ($entries as $entry) {
+            $prefix = $entry['prefix'] ?? '# ';
             if ($entry['key'] === '') {
                 foreach (explode("\n", $entry['value']) as $text) {
-                    $lines[] = rtrim('# ' . $text);
+                    $lines[] = rtrim($prefix . $text);
                 }
 
                 continue;
             }
             $value = self::formatValue($entry['value']);
             if ($entry['commented'] ?? false) {
-                $lines[] = '# ' . $entry['key'] . '=' . str_replace("\n", '\\n', $value);
+                $lines[] = $prefix . $entry['key'] . '=' . str_replace("\n", '\\n', $value);
 
                 continue;
             }
@@ -163,8 +170,8 @@ class EnvFile
      * uncommented entry, so the last assignment wins. Commented entries are
      * left alone.
      *
-     * @param  list<array{key: string, value: string, commented: bool}>  $entries
-     * @return list<array{key: string, value: string, commented: bool}>
+     * @param  list<array{key: string, value: string, commented: bool, prefix?: string}>  $entries
+     * @return list<array{key: string, value: string, commented: bool, prefix?: string}>
      */
     public static function lastActiveWins(array $entries): array
     {
@@ -199,21 +206,20 @@ class EnvFile
     }
 
     /**
-     * Read a comment line as a commented-out assignment, or return null when
-     * it is a plain comment.
+     * Read the text of a comment as a commented-out assignment, or return
+     * null when it is a plain comment.
      *
-     * @return array{key: string, value: string, commented: bool}|null
+     * @return array{key: string, value: string, commented: bool, prefix: string}|null
      */
-    private static function parseCommentedAssignment(string $line): ?array
+    private static function parseCommentedAssignment(string $assignment, string $prefix): ?array
     {
-        $assignment = ltrim($line, "# \t");
         if (preg_match('/^[A-Za-z0-9_.\-]+[ \t]*=/', $assignment) !== 1) {
             return null;
         }
 
         $entry = self::parse($assignment)[0] ?? null;
 
-        return $entry === null ? null : [...$entry, 'commented' => true];
+        return $entry === null ? null : [...$entry, 'commented' => true, 'prefix' => $prefix];
     }
 
     private static function advancePastNewline(string $content, int $i): int

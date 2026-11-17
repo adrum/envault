@@ -29,7 +29,9 @@ function createVariable(App $app, int $environmentId, string $key, string $value
 function storedLines(App $app): array
 {
     return $app->variables()->get()
-        ->map(fn (Variable $variable): string => ($variable->is_commented ? '# ' : '') . $variable->key . '=' . $variable->latest_version->value)
+        ->map(fn (Variable $variable): string => $variable->key === ''
+            ? '# ' . $variable->latest_version->value
+            : ($variable->is_commented ? '# ' : '') . $variable->key . '=' . $variable->latest_version->value)
         ->all();
 }
 
@@ -39,16 +41,53 @@ test('import stores commented-out lines, including ones that repeat a key', func
         'environment_id' => $this->environmentId,
     ])->assertSessionHasNoErrors();
 
-    expect(storedLines($this->app_))->toBe(['DB_HOST=live', '# DB_HOST=staging', '# DB_HOST=local']);
+    expect(storedLines($this->app_))->toBe(['DB_HOST=live', '# DB_HOST=staging', '# DB_HOST=local', '# just a note']);
 });
 
-test('import rejects a key set by two uncommented lines and saves nothing', function () {
+test('when import content sets a key twice the last uncommented line wins', function () {
     $this->post(route('variables.import', $this->app_), [
         'env_content' => "DB_HOST=one\nDB_PORT=3306\nDB_HOST=two",
         'environment_id' => $this->environmentId,
-    ])->assertSessionHasErrors('env_content');
+    ])->assertSessionHasNoErrors();
 
-    expect($this->app_->variables()->count())->toBe(0);
+    expect(storedLines($this->app_))->toBe(['DB_PORT=3306', 'DB_HOST=two']);
+});
+
+test('import keeps plain comments in place and they survive a re-import', function () {
+    $content = "# Database\nDB_HOST=live\n# Mail\nMAIL_HOST=smtp";
+
+    $this->post(route('variables.import', $this->app_), [
+        'env_content' => $content,
+        'environment_id' => $this->environmentId,
+    ])->assertSessionHasNoErrors();
+    $ids = $this->app_->variables()->pluck('id')->all();
+
+    $this->post(route('variables.import', $this->app_), [
+        'env_content' => $content,
+        'environment_id' => $this->environmentId,
+    ])->assertSessionHasNoErrors();
+
+    expect(storedLines($this->app_))->toBe(['# Database', 'DB_HOST=live', '# Mail', 'MAIL_HOST=smtp'])
+        ->and($this->app_->variables()->pluck('id')->all())->toBe($ids);
+});
+
+test('export writes plain comments back as comment lines', function () {
+    createVariable($this->app_, $this->environmentId, '', 'Database', commented: true);
+    createVariable($this->app_, $this->environmentId, 'DB_HOST', 'live');
+
+    $exported = $this->get(route('variables.export', ['app' => $this->app_, 'environment' => $this->environmentId]))
+        ->getContent();
+
+    expect($exported)->toBe("# Database\nDB_HOST=live");
+});
+
+test('a plain comment cannot be uncommented', function () {
+    $comment = createVariable($this->app_, $this->environmentId, '', 'Database', commented: true);
+
+    $this->patch(route('variables.update', $comment), ['is_commented' => false])
+        ->assertSessionHasErrors('key');
+
+    expect($comment->fresh()->is_commented)->toBeTrue();
 });
 
 test('commenting out a line on import keeps the variable and its history', function () {

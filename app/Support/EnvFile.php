@@ -13,7 +13,9 @@ class EnvFile
      *  - Double-quoted values: KEY="value" (may span lines; \n \r \t \\ \" expanded)
      *  - Commented-out assignments: # KEY=value (kept, flagged as commented;
      *    the value never continues past the end of the line)
-     *  - Other comments and blank lines (skipped)
+     *  - Other comments: # text (kept as a commented entry with an empty key
+     *    and the text as its value)
+     *  - Blank lines (skipped)
      *
      * @return list<array{key: string, value: string, commented: bool}>
      */
@@ -42,10 +44,12 @@ class EnvFile
                 while ($i < $length && $content[$i] !== "\n") {
                     $i++;
                 }
-                $entry = self::parseCommentedAssignment(substr($content, $commentStart, $i - $commentStart));
-                if ($entry !== null) {
-                    $entries[] = $entry;
-                }
+                $comment = substr($content, $commentStart, $i - $commentStart);
+                $entries[] = self::parseCommentedAssignment($comment) ?? [
+                    'key' => '',
+                    'value' => rtrim((string) preg_replace('/^#[ \t]?/', '', $comment)),
+                    'commented' => true,
+                ];
                 $i = self::advancePastNewline($content, $i);
 
                 continue;
@@ -127,7 +131,7 @@ class EnvFile
      * quotes with `\`, `"`, `\r` escaped (newlines are preserved literally so
      * the output stays human-readable). Commented entries are written as
      * `# KEY=value` with newlines escaped, so the whole value stays inside
-     * the comment.
+     * the comment. Entries with an empty key are plain comments: `# text`.
      *
      * @param  iterable<array{key: string, value: string, commented?: bool}>  $entries
      */
@@ -135,6 +139,13 @@ class EnvFile
     {
         $lines = [];
         foreach ($entries as $entry) {
+            if ($entry['key'] === '') {
+                foreach (explode("\n", $entry['value']) as $text) {
+                    $lines[] = rtrim('# ' . $text);
+                }
+
+                continue;
+            }
             $value = self::formatValue($entry['value']);
             if ($entry['commented'] ?? false) {
                 $lines[] = '# ' . $entry['key'] . '=' . str_replace("\n", '\\n', $value);
@@ -148,21 +159,28 @@ class EnvFile
     }
 
     /**
-     * List the keys that are assigned more than once by uncommented lines.
+     * Drop every uncommented entry whose key is assigned again by a later
+     * uncommented entry, so the last assignment wins. Commented entries are
+     * left alone.
      *
-     * @param  iterable<array{key: string, value: string, commented: bool}>  $entries
-     * @return list<string>
+     * @param  list<array{key: string, value: string, commented: bool}>  $entries
+     * @return list<array{key: string, value: string, commented: bool}>
      */
-    public static function duplicateActiveKeys(iterable $entries): array
+    public static function lastActiveWins(array $entries): array
     {
-        $counts = [];
-        foreach ($entries as $entry) {
+        $seen = [];
+        $kept = [];
+        foreach (array_reverse($entries) as $entry) {
             if (!$entry['commented']) {
-                $counts[$entry['key']] = ($counts[$entry['key']] ?? 0) + 1;
+                if (isset($seen[$entry['key']])) {
+                    continue;
+                }
+                $seen[$entry['key']] = true;
             }
+            $kept[] = $entry;
         }
 
-        return array_map(strval(...), array_keys(array_filter($counts, fn (int $count): bool => $count > 1)));
+        return array_reverse($kept);
     }
 
     public static function formatValue(string $value): string
@@ -182,7 +200,7 @@ class EnvFile
 
     /**
      * Read a comment line as a commented-out assignment, or return null when
-     * it is an ordinary comment.
+     * it is a plain comment.
      *
      * @return array{key: string, value: string, commented: bool}|null
      */

@@ -6,7 +6,8 @@
 // Parse a .env-formatted string. Mirrors App\Support\EnvFile::parse on the
 // backend so the frontend bulk editor and the import endpoint behave identically.
 // Commented-out assignments (`# KEY=value`) are kept and flagged `commented`;
-// any other comment is skipped.
+// any other comment is kept as a commented entry with an empty key and the
+// comment text as its value.
 export type EnvEntry = {
   key: string;
   value: string;
@@ -38,10 +39,21 @@ export const parseEnvFile = (content: string): EnvEntry[] => {
       const assignment = content
         .substring(commentStart, i)
         .replace(/^[# \t]+/, "");
-      if (COMMENTED_ASSIGNMENT.test(assignment)) {
-        const [entry] = parseEnvFile(assignment);
-        if (entry) out.push({ ...entry, commented: true });
-      }
+      const [entry] = COMMENTED_ASSIGNMENT.test(assignment)
+        ? parseEnvFile(assignment)
+        : [];
+      out.push(
+        entry
+          ? { ...entry, commented: true }
+          : {
+              key: "",
+              value: content
+                .substring(commentStart, i)
+                .replace(/^#[ \t]?/, "")
+                .trimEnd(),
+              commented: true,
+            },
+      );
       i = advancePastNewline(i);
       continue;
     }
@@ -116,13 +128,19 @@ export const formatEnvValue = (value: string): string => {
 };
 
 // Commented entries are written as `# KEY=value` with newlines escaped so the
-// whole value stays inside the comment.
+// whole value stays inside the comment. Entries with an empty key are plain
+// comments: `# text`.
 export const serializeEnvFile = (entries: EnvEntry[]): string =>
   entries
     .map((e) =>
-      e.commented
-        ? `# ${e.key}=${formatEnvValue(e.value).replace(/\n/g, "\\n")}`
-        : `${e.key}=${formatEnvValue(e.value)}`,
+      e.key === ""
+        ? e.value
+            .split("\n")
+            .map((text) => `# ${text}`.trimEnd())
+            .join("\n")
+        : e.commented
+          ? `# ${e.key}=${formatEnvValue(e.value).replace(/\n/g, "\\n")}`
+          : `${e.key}=${formatEnvValue(e.value)}`,
     )
     .join("\n");
 

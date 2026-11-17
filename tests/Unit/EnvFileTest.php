@@ -55,12 +55,28 @@ test('parses single-quoted multiline value', function () {
     expect($entries[0]['value'])->toEqual("-----BEGIN PUBLIC KEY-----\nABC\n-----END PUBLIC KEY-----");
 });
 
-test('skips prose comments and blank lines', function () {
-    $env = "# comment\n\nFOO=bar\n# see https://example.com/?a=b\n# trailing";
+test('keeps plain comments under an empty key and skips blank lines', function () {
+    $env = "# comment\n\nFOO=bar\n#see https://example.com/?a=b\n#";
 
     expect(EnvFile::parse($env))->toEqual([
+        ['key' => '', 'value' => 'comment', 'commented' => true],
         ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
+        ['key' => '', 'value' => 'see https://example.com/?a=b', 'commented' => true],
+        ['key' => '', 'value' => '', 'commented' => true],
     ]);
+});
+
+test('serialize writes plain comments back as comment lines', function () {
+    $entries = [
+        ['key' => '', 'value' => 'Database', 'commented' => true],
+        ['key' => '', 'value' => '', 'commented' => true],
+        ['key' => 'FOO', 'value' => 'bar', 'commented' => false],
+    ];
+
+    $out = EnvFile::serialize($entries);
+
+    expect($out)->toEqual("# Database\n#\nFOO=bar");
+    expect(EnvFile::parse($out))->toEqual($entries);
 });
 
 test('keeps commented-out assignments and flags them', function () {
@@ -95,10 +111,11 @@ test('serialize writes commented entries on a single comment line', function () 
     expect(EnvFile::parse($out))->toEqual($entries);
 });
 
-test('reports keys assigned by more than one uncommented line', function () {
+test('the last uncommented assignment of a key wins', function () {
     $entries = EnvFile::parse("FOO=1\nBAR=1\nFOO=2\n# BAR=2\n# BAZ=1\n# BAZ=2");
 
-    expect(EnvFile::duplicateActiveKeys($entries))->toEqual(['FOO']);
+    expect(EnvFile::serialize(EnvFile::lastActiveWins($entries)))
+        ->toEqual("BAR=1\nFOO=2\n# BAR=2\n# BAZ=1\n# BAZ=2");
 });
 
 test('serialize quotes multiline values and preserves newlines', function () {

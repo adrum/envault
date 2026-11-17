@@ -200,6 +200,7 @@ export default function AppShow({
   const [bulkJsonMode, setBulkJsonMode] = useState(false);
   const [bulkJsonContent, setBulkJsonContent] = useState("");
   const [bulkJsonError, setBulkJsonError] = useState<string | null>(null);
+  const [bulkSaveError, setBulkSaveError] = useState<string | null>(null);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [pendingWarnings, setPendingWarnings] = useState<Warning[]>([]);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
@@ -238,16 +239,12 @@ export default function AppShow({
     );
 
   // A key may only be set once by uncommented lines; commented-out lines can
-  // repeat it. Saving is blocked while the editor content breaks that rule.
+  // repeat it. The bulk editor refuses to save content that breaks that rule.
   const duplicateKeysMessage = (content: string): string | null => {
     const keys = duplicateActiveKeys(parseEnvFile(content));
     if (keys.length === 0) return null;
     return `${keys.join(", ")} ${keys.length === 1 ? "is" : "are"} set more than once. Comment out or remove the extra lines.`;
   };
-  const bulkDuplicateError = bulkJsonMode
-    ? null
-    : duplicateKeysMessage(bulkContent);
-  const importDuplicateError = duplicateKeysMessage(importContent);
   const editKeyConflict =
     !!selectedVariable &&
     !editCommented &&
@@ -567,6 +564,7 @@ export default function AppShow({
       setBulkJsonMode(false);
     }
     setBulkJsonError(null);
+    setBulkSaveError(null);
     openBulk();
   };
 
@@ -615,6 +613,9 @@ export default function AppShow({
   const handleBulkSaveAttempt = () => {
     const env = resolveBulkEnvContent();
     if (env === null) return;
+    const duplicateError = duplicateKeysMessage(env);
+    setBulkSaveError(duplicateError);
+    if (duplicateError) return;
     const proceed = () => {
       if (isProductionEnv) {
         setBulkConfirmOpen(true);
@@ -817,7 +818,11 @@ export default function AppShow({
                   className="flex w-full items-center justify-between px-4 py-4 text-left transition-colors duration-150 hover:bg-gray-50 focus:bg-gray-100 focus:outline-none sm:px-6 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
                 >
                   <div className="min-w-0 flex-1">
-                    {variable.is_commented ? (
+                    {variable.key === "" ? (
+                      <Text size="sm" c="dimmed" ff="monospace" truncate>
+                        # {variable.latest_version?.value ?? ""}
+                      </Text>
+                    ) : variable.is_commented ? (
                       <Group gap="xs">
                         <Text size="sm" fw={500} c="dimmed" ff="monospace">
                           # {variable.key}
@@ -919,26 +924,30 @@ export default function AppShow({
           <>
             <Group gap="sm" mb="md">
               <Text size="xl" fw={700}>
-                {selectedVariable.key}
+                {selectedVariable.key || "Comment"}
               </Text>
-              {selectedVariable.is_commented && (
+              {selectedVariable.is_commented && selectedVariable.key !== "" && (
                 <Badge variant="light" color="gray">
                   Commented out
                 </Badge>
               )}
             </Group>
             <div className="border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-4 border-b border-gray-100 py-5 dark:border-gray-800">
-                <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
-                  Key
-                </label>
-                <TextInput
-                  value={selectedVariable.key}
-                  readOnly
-                  className="flex-1"
-                  variant="filled"
-                />
-              </div>
+              {selectedVariable.key !== "" && (
+                <>
+                  <div className="flex items-center gap-4 border-b border-gray-100 py-5 dark:border-gray-800">
+                    <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
+                      Key
+                    </label>
+                    <TextInput
+                      value={selectedVariable.key}
+                      readOnly
+                      className="flex-1"
+                      variant="filled"
+                    />
+                  </div>
+                </>
+              )}
               <div className="flex items-start gap-4 py-5">
                 <label className="mt-2 w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
                   Value
@@ -976,24 +985,28 @@ export default function AppShow({
         {selectedVariable && modalMode === "edit" && (
           <>
             <Text size="xl" fw={700} mb="md">
-              Edit {selectedVariable.key}
+              Edit {selectedVariable.key || "comment"}
             </Text>
             <div className="border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-4 border-b border-gray-100 py-5 dark:border-gray-800">
-                <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
-                  Key
-                </label>
-                <TextInput
-                  value={editKey}
-                  onChange={(e) => setEditKey(e.currentTarget.value)}
-                  className="flex-1"
-                  error={
-                    editKeyConflict
-                      ? "Another active variable already uses this key."
-                      : pageErrors?.key
-                  }
-                />
-              </div>
+              {selectedVariable.key !== "" && (
+                <>
+                  <div className="flex items-center gap-4 border-b border-gray-100 py-5 dark:border-gray-800">
+                    <label className="w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
+                      Key
+                    </label>
+                    <TextInput
+                      value={editKey}
+                      onChange={(e) => setEditKey(e.currentTarget.value)}
+                      className="flex-1"
+                      error={
+                        editKeyConflict
+                          ? "Another active variable already uses this key."
+                          : pageErrors?.key
+                      }
+                    />
+                  </div>
+                </>
+              )}
               <div className="flex items-start gap-4 py-5">
                 <label className="mt-2 w-16 shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300">
                   Value
@@ -1026,14 +1039,20 @@ export default function AppShow({
                   )}
                 </div>
               </div>
-              <div className="border-t border-gray-100 py-5 dark:border-gray-800">
-                <Switch
-                  checked={editCommented}
-                  onChange={(e) => setEditCommented(e.currentTarget.checked)}
-                  label="Commented out"
-                  description="Kept in the .env file as a comment and left out of what apps receive."
-                />
-              </div>
+              {selectedVariable.key !== "" && (
+                <>
+                  <div className="border-t border-gray-100 py-5 dark:border-gray-800">
+                    <Switch
+                      checked={editCommented}
+                      onChange={(e) =>
+                        setEditCommented(e.currentTarget.checked)
+                      }
+                      label="Commented out"
+                      description="Kept in the .env file as a comment and left out of what apps receive."
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
               <Group gap="xs">
@@ -1080,9 +1099,9 @@ export default function AppShow({
               ? "Edit nested JSON (e.g. for appsettings.json). Saved as flat .NET-style keys using __ separators."
               : "Edit all variables as a .env file. Commented-out lines like # KEY=value are kept. Changes will be saved when you click Save."}
           </Text>
-          {(bulkDuplicateError || pageErrors?.env_content) && (
+          {bulkSaveError && (
             <Text size="sm" c="red">
-              {bulkDuplicateError ?? pageErrors?.env_content}
+              {bulkSaveError}
             </Text>
           )}
           {(bulkJsonError || bulkJsonParseError) && (
@@ -1109,7 +1128,10 @@ export default function AppShow({
             ) : (
               <CodeMirror
                 value={bulkContent}
-                onChange={setBulkContent}
+                onChange={(value) => {
+                  setBulkContent(value);
+                  setBulkSaveError(null);
+                }}
                 extensions={[envLanguage]}
                 theme={oneDark}
                 minHeight="300px"
@@ -1143,7 +1165,7 @@ export default function AppShow({
                 disabled={
                   bulkJsonMode
                     ? !bulkJsonContent.trim() || !bulkJsonValid
-                    : !bulkContent.trim() || !!bulkDuplicateError
+                    : !bulkContent.trim()
                 }
                 leftSection={<FontAwesomeIcon icon={faCheck} />}
               >
@@ -1216,7 +1238,8 @@ export default function AppShow({
         <Stack>
           <Text size="sm" c="dimmed">
             Paste the contents of a .env file below. Existing variables will be
-            updated with new values.
+            updated with new values. If a key is set more than once, the last
+            one wins.
           </Text>
           <Textarea
             label="Environment Variables"
@@ -1225,7 +1248,6 @@ export default function AppShow({
             onChange={(e) => setImportContent(e.currentTarget.value)}
             autosize
             minRows={8}
-            error={importDuplicateError ?? pageErrors?.env_content}
           />
           <input
             type="file"
@@ -1248,7 +1270,7 @@ export default function AppShow({
             <Button
               onClick={handleImport}
               loading={saving}
-              disabled={!importContent.trim() || !!importDuplicateError}
+              disabled={!importContent.trim()}
             >
               Import
             </Button>
@@ -1260,7 +1282,7 @@ export default function AppShow({
       <Modal
         opened={!!rollbackVariable}
         onClose={() => setRollbackVariable(null)}
-        title={`Rollback ${rollbackVariable?.key ?? "Variable"}`}
+        title={`Rollback ${rollbackVariable?.key || "comment"}`}
         size="lg"
       >
         <Stack>
@@ -1340,8 +1362,8 @@ export default function AppShow({
               Delete this variable
             </Text>
             <Text size="sm" c="dimmed" mt={4}>
-              Are you sure you want to delete {deleteVariable?.key}? This action
-              is permanent.
+              Are you sure you want to delete{" "}
+              {deleteVariable?.key || "this comment"}? This action is permanent.
             </Text>
           </div>
         </div>

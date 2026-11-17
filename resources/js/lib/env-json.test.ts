@@ -19,9 +19,11 @@ describe("parseEnvFile", () => {
     ]);
   });
 
-  it("skips comments and blank lines", () => {
-    expect(parseEnvFile("# a comment\n\nKEY=value\n")).toEqual([
+  it("keeps plain comments under an empty key and skips blank lines", () => {
+    expect(parseEnvFile("# a comment\n\nKEY=value\n#\n")).toEqual([
+      { key: "", value: "a comment", commented: true },
       { key: "KEY", value: "value", quoted: false },
+      { key: "", value: "", commented: true },
     ]);
   });
 
@@ -52,16 +54,22 @@ describe("parseEnvFile", () => {
 });
 
 describe("commented-out assignments", () => {
-  it("keeps them, flagged as commented, and skips prose comments", () => {
+  it("keeps them, flagged as commented, apart from plain comments", () => {
     expect(
       parseEnvFile(
-        'KEY=live\n# KEY=old\n#OTHER="a # b"\n# just a note\n# see https://x.test/?a=b',
+        'KEY=live\n# KEY=old\n#OTHER="a # b"\n# see https://x.test/?a=b',
       ),
     ).toEqual([
       { key: "KEY", value: "live", quoted: false },
       { key: "KEY", value: "old", quoted: false, commented: true },
       { key: "OTHER", value: "a # b", quoted: true, commented: true },
+      { key: "", value: "see https://x.test/?a=b", commented: true },
     ]);
+  });
+
+  it("round-trips plain comments", () => {
+    const text = "# Database\n#\nKEY=value";
+    expect(serializeEnvFile(parseEnvFile(text))).toBe(text);
   });
 
   it("never lets a commented value continue onto the next line", () => {

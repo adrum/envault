@@ -77,14 +77,8 @@ class VariableController extends Controller
         $validated['environment_id'] = $validated['environment_id']
             ?? $app->environments()->value('environments.id');
 
-        $entries = EnvFile::parse($validated['env_content']);
-
-        $duplicateKeys = EnvFile::duplicateActiveKeys($entries);
-        if ($duplicateKeys !== []) {
-            return back()->withErrors([
-                'env_content' => 'These keys are set more than once: ' . implode(', ', $duplicateKeys) . '. Comment out or remove the extra lines.',
-            ]);
-        }
+        // When a key is set by more than one uncommented line, the last one wins.
+        $entries = EnvFile::lastActiveWins(EnvFile::parse($validated['env_content']));
 
         $existing = $app->variables()->where('environment_id', $validated['environment_id'])->get();
         $currentValues = $existing->mapWithKeys(fn (Variable $variable): array => [
@@ -250,6 +244,10 @@ class VariableController extends Controller
         $newCommented = $request->has('is_commented') ? $request->boolean('is_commented') : $variable->is_commented;
         $keyChanged = $newKey !== $variable->key;
         $commentedChanged = $newCommented !== $variable->is_commented;
+
+        if (!$newCommented && $newKey === '') {
+            return back()->withErrors(['key' => 'A comment needs a key before it can be uncommented.']);
+        }
 
         // Commented-out variables may share a key; active ones may not.
         if (($keyChanged || $commentedChanged) && !$newCommented) {
